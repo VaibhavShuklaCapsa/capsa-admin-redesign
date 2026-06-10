@@ -1,0 +1,4 @@
+Invoice Number,PO Number,Invoice Amount,Tenor (Days),Issue Date,Due Date,Anchor Name,Anchor PAN,Customer GST,Processing Fee,Details,Name & Address
+INV001,PO-2023-001,1000000,90,2023-01-01,2023-03-31,ABC Corp Pvt Ltd,ABCDE1234F,GST123456789,2.5,Trade receivables for goods supplied,123 Main Street Mumbai
+INV002,PO-2023-002,500000,60,2023-01-15,2023-03-15,XYZ Industries,FGHIJ5678K,GST987654321,2.5,Invoice for services rendered,456 Park Avenue Delhi
+INV003,PO-2023-003,750000,120,2023-02-01,2023-05-31,PQR Enterprises,LMNOP9012L,GST456789123,2.5,Outstanding invoice payment,789 Business Hub Bangalore
