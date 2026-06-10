@@ -16,7 +16,11 @@
 # next.js
 /.next/
 /out/
+.claude/
 
+.vscode/
+.claude/
+ADMIN_RULES.md
 # production
 /build
 
