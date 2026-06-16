@@ -22,6 +22,7 @@ import {
   getManualSettlementRFInvoices,
   getManualSettlementRevenues,
   getManualSettlementAssets,
+  applySettlementAsset,
   applySettlementInvoice,
   applySettlementRFInvoice,
   applySettlementRevenue,
@@ -110,7 +111,7 @@ const TABS = [
     dataKey:           "settlement_list",
     settleConfig:      INVOICE_SETTLE_CONFIG,
     fetchFn:           getManualSettlementInvoices,
-    settleFn:          (row) => applySettlementInvoice({ pan: row.pan, invoice: row.invoice_no }),
+    settleFn:          (row) => applySettlementInvoice({ pan: row.vendor_pan, invoice: row.invoice_no }),
   },
   {
     value:             "rf-invoices",
@@ -121,7 +122,7 @@ const TABS = [
     dataKey:           "settlement_list",
     settleConfig:      INVOICE_SETTLE_CONFIG,
     fetchFn:           getManualSettlementRFInvoices,
-    settleFn:          (row) => applySettlementRFInvoice({ pan: row.pan, invoice: row.invoice_no }),
+    settleFn:          (row) => applySettlementRFInvoice({ pan: row.vendor_pan, invoice: row.invoice_no }),
   },
   {
     value:             "revenues",
@@ -143,6 +144,7 @@ const TABS = [
     dataKey:           "settlement_list",
     settleConfig:      ASSET_SETTLE_CONFIG,
     fetchFn:           getManualSettlementAssets,
+    settleFn:          (row) => applySettlementAsset({ deal_id: row.deal_id }),
   },
 ]
 

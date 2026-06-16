@@ -1,17 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { MoreHorizontal } from "lucide-react"
+import { format } from "date-fns"
 import DateRangePicker from "../components/ui/DateRangePicker"
 import Pagination from "../components/Pagination/Pagination"
 import PageLoader from "../components/ui/PageLoader"
 import { Button } from "../components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu"
 import {
   Table,
   TableBody,
@@ -22,120 +16,107 @@ import {
 } from "../components/ui/table"
 import { getRevenueData } from "../services/revenue"
 
-const TABLE_HEADER = [
-  { key: "Transaction Month", title: "transactionMonth" },
-  { key: "Vendor Fees (₦)",   title: "vendorFees"       },
-  { key: "Investor Fees (₦)", title: "investorFees"     },
-  { key: "Total Revenue (₦)", title: "totalRevenue"     },
-]
+const PAGE_SIZE = 10
 
-const ROWS = [
-  { id: "1", transactionMonth: "January 2026",   vendorFees: "200,000,000", investorFees: "200,000,000", totalRevenue: "200,000,000" },
-  { id: "2", transactionMonth: "December 2025",  vendorFees: "200,000,000", investorFees: "200,000,000", totalRevenue: "200,000,000" },
-  { id: "3", transactionMonth: "November 2025",  vendorFees: "200,000,000", investorFees: "200,000,000", totalRevenue: "200,000,000" },
-  { id: "4", transactionMonth: "October 2025",   vendorFees: "200,000,000", investorFees: "200,000,000", totalRevenue: "200,000,000" },
-  { id: "5", transactionMonth: "September 2025", vendorFees: "200,000,000", investorFees: "200,000,000", totalRevenue: "200,000,000" },
-  { id: "6", transactionMonth: "August 2025",    vendorFees: "200,000,000", investorFees: "200,000,000", totalRevenue: "200,000,000" },
-  { id: "7", transactionMonth: "July 2025",      vendorFees: "200,000,000", investorFees: "200,000,000", totalRevenue: "200,000,000" },
-  { id: "8", transactionMonth: "June 2025",      vendorFees: "200,000,000", investorFees: "200,000,000", totalRevenue: "200,000,000" },
-  { id: "9", transactionMonth: "May 2025",       vendorFees: "200,000,000", investorFees: "200,000,000", totalRevenue: "200,000,000" },
-]
-
-const PAGE_DATA = {
-  pageTitle:      "Revenue",
-  pageSubtitle:   "Showing revenue per month",
-  dateRangeLabel: "Jan 20, 2023 - Feb 09, 2023",
-  tableHeader:    TABLE_HEADER,
-  rows:           ROWS,
-  totalPages:     10,
+const fmtNum = (val) => {
+  if (val === null || val === undefined) return ""
+  return Number(val).toLocaleString("en-NG", { maximumFractionDigits: 2 })
 }
 
 export default function RevenuePage() {
-  const [data, setData]               = useState(null)
   const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState(false)
+  const [rows, setRows]               = useState([])
+  const [totalPages, setTotalPages]   = useState(1)
   const [currentPage, setCurrentPage] = useState(1)
+  const [fromDate, setFromDate]       = useState("")
+  const [toDate, setToDate]           = useState("")
+
+  const fetchData = async ({ page = 1, from = "", to = "" }) => {
+    try {
+      const res = await getRevenueData({ page_number: page, page_size: PAGE_SIZE, from_date: from, to_date: to })
+      setRows(res?.data?.revenue_list ?? [])
+      setTotalPages(res?.data?.pagination?.total_pages ?? 1)
+      setError(false)
+    } catch {
+      setError(true)
+      setRows([])
+    }
+  }
 
   useEffect(() => {
-    setLoading(true)
-    getRevenueData(PAGE_DATA).then((res) => {
-      setData(res)
-      setLoading(false)
-    })
+    fetchData({ page: 1 }).finally(() => setLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+    fetchData({ page, from: fromDate, to: toDate })
+  }
+
+  const handleDateChange = (range) => {
+    if (!range?.from || !range?.to) return
+    const from = format(range.from, "yyyy-MM-dd")
+    const to   = format(range.to,   "yyyy-MM-dd")
+    setFromDate(from); setToDate(to); setCurrentPage(1)
+    fetchData({ page: 1, from, to })
+  }
 
   if (loading) return <PageLoader />
 
   return (
     <section className="space-y-6">
       <header>
-        <h2 className="text-2xl font-bold text-customBlack mb-1">{data.pageTitle}</h2>
-        <p className="text-sm text-grey">{data.pageSubtitle}</p>
+        <h2 className="text-2xl font-bold text-customBlack mb-1">Revenue</h2>
+        <p className="text-sm text-grey">Showing revenue per month</p>
       </header>
 
-      {/* Date + Download */}
       <div className="flex items-center justify-between gap-4">
-        <DateRangePicker label={data.dateRangeLabel} />
-        <Button className="bg-blue hover:bg-blue/90 text-white rounded-lg px-5 h-10">
-          Download
-        </Button>
+        <DateRangePicker label="Select Date Range" onChange={handleDateChange} />
+        <Button className="bg-blue hover:bg-blue/90 text-white rounded-lg px-5 h-10">Download</Button>
       </div>
 
-      {/* Table card */}
       <section className="bg-white border border-borderGrey rounded-xl overflow-hidden">
         <div className="overflow-x-auto bg-white">
           <Table>
             <TableHeader className="bg-white">
               <TableRow className="bg-white">
-                {data.tableHeader.map((col) => (
-                  <TableHead key={col.key} className="px-6 py-6 text-left font-bold text-grey whitespace-nowrap">
-                    {col.key}
-                  </TableHead>
-                ))}
-                <TableHead className="px-6 py-6 text-left font-bold text-grey">Actions</TableHead>
+                <TableHead className="px-6 py-6 text-left font-bold text-grey whitespace-nowrap">Transaction Month</TableHead>
+                <TableHead className="px-6 py-6 text-left font-bold text-grey whitespace-nowrap">Vendor Fees (₦)</TableHead>
+                <TableHead className="px-6 py-6 text-left font-bold text-grey whitespace-nowrap">Investor Fees (₦)</TableHead>
+                <TableHead className="px-6 py-6 text-left font-bold text-grey whitespace-nowrap">Total Revenue (₦)</TableHead>
               </TableRow>
             </TableHeader>
 
             <TableBody className="bg-white">
-              {data.rows.map((row) => (
-                <TableRow key={row.id}>
-                  {data.tableHeader.map((col) => (
-                    <TableCell key={col.key} className="px-6 py-6 text-tableGrey whitespace-nowrap">
-                      {row[col.title]}
-                    </TableCell>
-                  ))}
-                  <TableCell className="px-6 py-6">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="cursor-pointer">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="min-w-48">
-                        <DropdownMenuItem className="font-semibold text-customBlack p-4 cursor-default">
-                          Actions
-                        </DropdownMenuItem>
-                        <hr />
-                        <DropdownMenuItem
-                          className="p-4 text-sm cursor-pointer"
-                          onClick={() => console.log("View details", row)}
-                        >
-                          View Details
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              {error ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-16 text-grey text-sm">
+                    Unable to load revenue data. Please try again.
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-16 text-grey text-sm">
+                    No revenue data found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rows.map((row, i) => (
+                  <TableRow key={`${row.year}-${row.month}-${i}`}>
+                    <TableCell className="px-6 py-6 text-tableGrey whitespace-nowrap">{row.transaction_month}</TableCell>
+                    <TableCell className="px-6 py-6 text-tableGrey whitespace-nowrap">{fmtNum(row.vendor_fees)}</TableCell>
+                    <TableCell className="px-6 py-6 text-tableGrey whitespace-nowrap">{fmtNum(row.investor_fees)}</TableCell>
+                    <TableCell className="px-6 py-6 text-tableGrey whitespace-nowrap">{fmtNum(row.total_revenue)}</TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
 
         <footer className="p-4 border-t border-borderGrey">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={data.totalPages}
-            onPageChange={setCurrentPage}
-          />
+          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
         </footer>
       </section>
     </section>

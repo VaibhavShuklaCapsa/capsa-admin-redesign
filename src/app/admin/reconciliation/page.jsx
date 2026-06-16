@@ -2,65 +2,25 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { MoreHorizontal } from "lucide-react"
-import DateRangePicker from "../components/ui/DateRangePicker"
 import PageLoader from "../components/ui/PageLoader"
 import { Button } from "../components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../components/ui/table"
-import {
-  getReconciliationData,
-  viewBalanceHistory,
-  viewAccountStatement,
-} from "../services/reconciliation"
+import { getReconciliationData, viewAccountStatement } from "../services/reconciliation"
 
-const TABLE_HEADER = [
-  { key: "Pool Account Balance (₦)",    title: "poolAccountBalance"    },
-  { key: "Capsa Platform Balance (₦)",  title: "capsaPlatformBalance"  },
-  { key: "Difference (₦)",              title: "difference"            },
-]
-
-const ROWS = [
-  {
-    id: "1",
-    poolAccountBalance:   "200,000,000",
-    capsaPlatformBalance: "200,000,000",
-    difference:           "200,000,000",
-  },
-]
-
-const PAGE_DATA = {
-  pageTitle:      "Reconciliation",
-  pageSubtitle:   "Showing balance history",
-  dateRangeLabel: "Jan 20, 2023 - Feb 09, 2023",
-  downloadLabel:  "Download",
-  tableHeader:    TABLE_HEADER,
-  rows:           ROWS,
+const fmtNum = (val) => {
+  if (val === null || val === undefined) return "—"
+  return Number(val).toLocaleString("en-NG", { maximumFractionDigits: 2 })
 }
 
 export default function ReconciliationPage() {
-  const router                = useRouter()
-  const [data, setData]       = useState(null)
-  const [loading, setLoading] = useState(true)
+  const router                  = useRouter()
+  const [loading, setLoading]   = useState(true)
+  const [rec, setRec]           = useState(null)
 
   useEffect(() => {
-    setLoading(true)
-    getReconciliationData(PAGE_DATA).then((res) => {
-      setData(res)
-      setLoading(false)
-    })
+    getReconciliationData()
+      .then((res) => { setRec(res?.data ?? null) })
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }, [])
 
   if (loading) return <PageLoader />
@@ -68,20 +28,13 @@ export default function ReconciliationPage() {
   return (
     <section className="space-y-6">
       <header>
-        <h2 className="text-2xl font-bold text-customBlack mb-1">{data.pageTitle}</h2>
-        <p className="text-sm text-grey">{data.pageSubtitle}</p>
+        <h2 className="text-2xl font-bold text-customBlack mb-1">Reconciliation</h2>
+        <p className="text-sm text-grey">Showing balance summary</p>
       </header>
-
-      <section className="flex items-center justify-between gap-4">
-        <DateRangePicker label={data.dateRangeLabel} />
-        <Button className="bg-blue hover:bg-blue/90 text-white rounded-lg px-5 h-10">
-          {data.downloadLabel}
-        </Button>
-      </section>
 
       <section className="bg-white border border-borderGrey rounded-xl overflow-hidden">
 
-        {/* Action buttons toolbar */}
+        {/* Toolbar */}
         <div className="flex items-center justify-end gap-3 p-4 border-b border-borderGrey">
           <Button
             variant="outline"
@@ -109,48 +62,42 @@ export default function ReconciliationPage() {
           </Button>
         </div>
 
-        {/* Table */}
+        {/* Balance table */}
         <div className="overflow-x-auto bg-white">
-          <Table>
-            <TableHeader className="bg-white">
-              <TableRow className="bg-white">
-                {data.tableHeader.map((col) => (
-                  <TableHead key={col.key} className="px-6 py-6 text-left font-bold text-grey whitespace-nowrap">
-                    {col.key}
-                  </TableHead>
-                ))}
-                <TableHead className="px-6 py-6 text-left font-bold text-grey">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-
-            <TableBody className="bg-white">
-              {data.rows.map((row) => (
-                <TableRow key={row.id}>
-                  {data.tableHeader.map((col) => (
-                    <TableCell key={col.key} className="px-6 py-6 text-tableGrey whitespace-nowrap">
-                      {row[col.title]}
-                    </TableCell>
-                  ))}
-                  <TableCell className="px-6 py-6">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="cursor-pointer">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="min-w-48">
-                        <DropdownMenuItem className="font-semibold text-customBlack p-4 cursor-default">Actions</DropdownMenuItem>
-                        <hr />
-                        <DropdownMenuItem className="p-4 text-sm cursor-pointer" onClick={() => console.log("View details", row)}>
-                          View Details
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <table className="w-full text-sm">
+            <thead className="bg-white">
+              <tr>
+                <th className="px-6 py-5 text-left font-bold text-grey whitespace-nowrap">Pool Account Balance (₦)</th>
+                <th className="px-6 py-5 text-left font-bold text-grey whitespace-nowrap">Capsa Platform Balance (₦)</th>
+                <th className="px-6 py-5 text-left font-bold text-grey whitespace-nowrap">Difference (₦)</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-borderGrey">
+              {rec ? (
+                <tr>
+                  <td className="px-6 py-5 text-tableGrey whitespace-nowrap">
+                    {rec.error_pool
+                      ? <span className="text-[#EF4444] text-xs">{rec.error_pool}</span>
+                      : fmtNum(rec.pool_account_balance)
+                    }
+                  </td>
+                  <td className="px-6 py-5 text-tableGrey whitespace-nowrap">
+                    {rec.error_platform
+                      ? <span className="text-[#EF4444] text-xs">{rec.error_platform}</span>
+                      : fmtNum(rec.capsa_platform_balance)
+                    }
+                  </td>
+                  <td className="px-6 py-5 text-tableGrey whitespace-nowrap">
+                    {fmtNum(rec.difference)}
+                  </td>
+                </tr>
+              ) : (
+                <tr>
+                  <td colSpan={3} className="text-center py-16 text-grey text-sm">No reconciliation data found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
     </section>

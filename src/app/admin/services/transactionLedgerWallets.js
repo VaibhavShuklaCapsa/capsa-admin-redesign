@@ -7,3 +7,10 @@ export const getTransactionLedgerWalletsData = async ({ page_number = 1, page_si
   const response = await http.postData({ page_number, page_size, search, from_date, to_date }, apiRoute)
   return response.data  // { res, data: { ledger, pagination }, messg }
 }
+
+export const reverseTransactionWallet = async ({ id }) => {
+  const apiRoute = routes.TransactionWalletReverse()
+  const http = new HttpService()
+  const response = await http.postData({ id }, apiRoute)
+  return response.data  // { res, data, messg }
+}

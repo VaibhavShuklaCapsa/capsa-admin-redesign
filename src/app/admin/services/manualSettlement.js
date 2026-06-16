@@ -43,6 +43,13 @@ export const getManualSettlementRevenues = async ({ page_number = 1, page_size =
   return response.data
 }
 
+export const applySettlementAsset = async ({ deal_id }) => {
+  const apiRoute = routes.SettlementAssetApply()
+  const http = new HttpService()
+  const response = await http.postData({ deal_id }, apiRoute)
+  return response.data  // { res, data, messg }
+}
+
 export const getManualSettlementAssets = async ({ page_number = 1, page_size = 10, search = "", from_date = "", to_date = "" } = {}) => {
   const apiRoute = routes.ManualSettlementAssets()
   const http = new HttpService()

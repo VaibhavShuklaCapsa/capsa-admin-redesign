@@ -1,35 +1,23 @@
 import { routes } from "./apiRoutes"
 import HttpService from "./httpService"
 
-export const getPushNotificationsData = async (data) => {
+export const getPushNotificationsData = async ({ page_number = 1, page_size = 10, search = "", from_date = "", to_date = "" } = {}) => {
   const apiRoute = routes.PushNotificationsList()
-  try {
-    const http = new HttpService()
-    const response = await http.postData(data, apiRoute)
-    return response?.data ?? data
-  } catch {
-    return { ...data, apiRoute }
-  }
+  const http = new HttpService()
+  const response = await http.postData({ page_number, page_size, search, from_date, to_date }, apiRoute)
+  return response.data  // { res, data: { user_list, pagination, filters }, messg }
 }
 
-export const sendPushNotification = async (data) => {
+export const sendPushNotification = async ({ email, title, body }) => {
   const apiRoute = routes.SendPushNotification()
-  try {
-    const http = new HttpService()
-    const response = await http.postData(data, apiRoute)
-    return response?.data ?? data
-  } catch {
-    return { success: false, apiRoute }
-  }
+  const http = new HttpService()
+  const response = await http.postData({ email, title, body }, apiRoute)
+  return response.data  // { res, data, messg }
 }
 
-export const sendBatchPushNotification = async (data) => {
+export const sendBatchPushNotification = async ({ title, body, user_type = "all" }) => {
   const apiRoute = routes.SendBatchPushNotification()
-  try {
-    const http = new HttpService()
-    const response = await http.postData(data, apiRoute)
-    return response?.data ?? data
-  } catch {
-    return { success: false, apiRoute }
-  }
+  const http = new HttpService()
+  const response = await http.postData({ title, body, user_type }, apiRoute)
+  return response.data  // { res, data, messg }
 }

@@ -1,56 +1,84 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { MoreHorizontal } from "lucide-react"
+import { format } from "date-fns"
+import { Search } from "lucide-react"
 import DateRangePicker from "../components/ui/DateRangePicker"
 import Pagination from "../components/Pagination/Pagination"
 import PageLoader from "../components/ui/PageLoader"
 import { Button } from "../components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu"
+import { Input } from "../components/ui/input"
 import { getVendorSweepInData } from "../services/vendorSweepIn"
 
-const ROWS = [
-  { id:"1", productNo:"PRD-0001",   productType:"Swap",       accountName:"Stanbic IBTC Bank Plc", bvn:"39029028428", accountType:"Investor", event:"Initiated",          transactionAmount:"200,000,000", transactionDate:"Sept 30, 2021 06:48 AM", sweepInStatus:"Settled", sweepInDate:"Sept 30, 2021 06:48 AM" },
-  { id:"2", productNo:"PRD-0001",   productType:"Redemption", accountName:"Shell PLC",             bvn:"39029028428", accountType:"Vendor",   event:"Completed",          transactionAmount:"200,000,000", transactionDate:"Sept 30, 2021 06:48 AM", sweepInStatus:"Settled", sweepInDate:"Sept 30, 2021 06:48 AM" },
-  { id:"3", productNo:"APR15TH-1",  productType:"Invoice",    accountName:"Stanbic IBTC Bank Plc", bvn:"39029028428", accountType:"Vendor",   event:"Discount of Invoice", transactionAmount:"200,000,000", transactionDate:"Sept 30, 2021 06:48 AM", sweepInStatus:"Settled", sweepInDate:"Sept 30, 2021 06:48 AM" },
-  { id:"4", productNo:"APR15TH-2",  productType:"Invoice",    accountName:"Delloite Nigeria",       bvn:"39029028428", accountType:"Vendor",   event:"Discount of Invoice", transactionAmount:"200,000,000", transactionDate:"Sept 30, 2021 06:48 AM", sweepInStatus:"Settled", sweepInDate:"Sept 30, 2021 06:48 AM" },
-  { id:"5", productNo:"INV062025-3",productType:"Invoice",    accountName:"Stanbic IBTC Bank Plc", bvn:"39029028428", accountType:"Investor", event:"Discount of Invoice", transactionAmount:"200,000,000", transactionDate:"Sept 30, 2021 06:48 AM", sweepInStatus:"Settled", sweepInDate:"Sept 30, 2021 06:48 AM" },
-]
+const PAGE_SIZE = 10
 
-const PAGE_DATA = {
-  dateRangeLabel: "Jan 20, 2023 - Feb 09, 2023",
-  rows:           ROWS,
-  totalPages:     10,
+const fmtDate = (val) => {
+  if (!val || val.startsWith("0000")) return "—"
+  try { return format(new Date(val), "MMM d, yyyy hh:mm a") } catch { return val }
+}
+
+const fmtNum = (val) => {
+  if (val === null || val === undefined) return ""
+  return Number(val).toLocaleString("en-NG", { maximumFractionDigits: 4 })
 }
 
 function SweepInStatusBadge({ status }) {
-  const isSettled = status === "Settled"
+  const styles = {
+    Settled:   "bg-lightGreen text-[#16A34A]",
+    Unsettled: "bg-[#FEF3C7] text-[#D97706]",
+  }
   return (
-    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
-      isSettled ? "bg-lightGreen text-[#16A34A]" : "bg-[#FEF3C7] text-[#D97706]"
-    }`}>
+    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${styles[status] ?? "bg-gray-100 text-gray-600"}`}>
       {status}
     </span>
   )
 }
 
 export default function VendorSweepInListPage() {
-  const [data, setData]               = useState(null)
   const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState(false)
+  const [rows, setRows]               = useState([])
+  const [totalPages, setTotalPages]   = useState(1)
   const [currentPage, setCurrentPage] = useState(1)
+  const [search, setSearch]           = useState("")
+  const [fromDate, setFromDate]       = useState("")
+  const [toDate, setToDate]           = useState("")
+
+  const fetchData = async ({ page = 1, searchVal = "", from = "", to = "" }) => {
+    try {
+      const res = await getVendorSweepInData({ page_number: page, page_size: PAGE_SIZE, search: searchVal, from_date: from, to_date: to })
+      setRows(res?.data?.sweep_list ?? [])
+      setTotalPages(res?.data?.pagination?.total_pages ?? 1)
+      setError(false)
+    } catch {
+      setError(true)
+      setRows([])
+    }
+  }
 
   useEffect(() => {
-    setLoading(true)
-    getVendorSweepInData(PAGE_DATA).then((res) => {
-      setData(res)
-      setLoading(false)
-    })
+    fetchData({ page: 1 }).finally(() => setLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const handleSearch = (val) => {
+    setSearch(val)
+    setCurrentPage(1)
+    fetchData({ page: 1, searchVal: val, from: fromDate, to: toDate })
+  }
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+    fetchData({ page, searchVal: search, from: fromDate, to: toDate })
+  }
+
+  const handleDateChange = (range) => {
+    if (!range?.from || !range?.to) return
+    const from = format(range.from, "yyyy-MM-dd")
+    const to   = format(range.to,   "yyyy-MM-dd")
+    setFromDate(from); setToDate(to); setCurrentPage(1)
+    fetchData({ page: 1, searchVal: search, from, to })
+  }
 
   if (loading) return <PageLoader />
 
@@ -62,13 +90,25 @@ export default function VendorSweepInListPage() {
       </header>
 
       <div className="flex items-center justify-between gap-4">
-        <DateRangePicker label={data.dateRangeLabel} />
+        <DateRangePicker label="Select Date Range" onChange={handleDateChange} />
         <Button className="bg-blue hover:bg-blue/90 text-white rounded-lg px-5 h-10">Download</Button>
       </div>
 
       <section className="bg-white border border-borderGrey rounded-xl overflow-hidden">
+        <div className="flex justify-end p-4 border-b border-borderGrey">
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-grey" />
+            <Input
+              value={search}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="Search by product no, name"
+              className="pl-9 h-10 border-borderGrey bg-white"
+            />
+          </div>
+        </div>
+
         <div className="overflow-x-auto bg-white">
-          <table className="min-w-[1400px] w-full text-sm">
+          <table className="min-w-[1500px] w-full text-sm">
             <thead className="bg-white">
               <tr>
                 <th className="px-5 py-6 text-left font-bold text-grey whitespace-nowrap">Product No</th>
@@ -78,49 +118,48 @@ export default function VendorSweepInListPage() {
                 <th className="px-5 py-6 text-left font-bold text-grey whitespace-nowrap">Account Type</th>
                 <th className="px-5 py-6 text-left font-bold text-grey whitespace-nowrap">Event</th>
                 <th className="px-5 py-6 text-left font-bold text-grey whitespace-nowrap">Transaction Amount (₦)</th>
-                <th className="px-5 py-6 text-left font-bold text-grey whitespace-nowrap">Transaction Date (₦)</th>
+                <th className="px-5 py-6 text-left font-bold text-grey whitespace-nowrap">Transaction Date</th>
                 <th className="px-5 py-6 text-left font-bold text-grey whitespace-nowrap">Sweep In Status</th>
-                <th className="px-5 py-6 text-left font-bold text-grey whitespace-nowrap">Sweep In Date (₦)</th>
-                <th className="px-5 py-6 text-left font-bold text-grey">Actions</th>
+                <th className="px-5 py-6 text-left font-bold text-grey whitespace-nowrap">Sweep In Date</th>
+                <th className="px-5 py-6 text-left font-bold text-grey whitespace-nowrap">Narration</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-borderGrey">
-              {data.rows.map((row) => (
-                <tr key={row.id}>
-                  <td className="px-5 py-6 text-tableGrey whitespace-nowrap">{row.productNo}</td>
-                  <td className="px-5 py-6 text-tableGrey whitespace-nowrap">{row.productType}</td>
-                  <td className="px-5 py-6 text-tableGrey whitespace-nowrap">{row.accountName}</td>
-                  <td className="px-5 py-6 text-tableGrey whitespace-nowrap">{row.bvn}</td>
-                  <td className="px-5 py-6 text-tableGrey whitespace-nowrap">{row.accountType}</td>
-                  <td className="px-5 py-6 text-tableGrey whitespace-nowrap">{row.event}</td>
-                  <td className="px-5 py-6 text-tableGrey whitespace-nowrap">{row.transactionAmount}</td>
-                  <td className="px-5 py-6 text-tableGrey whitespace-nowrap">{row.transactionDate}</td>
-                  <td className="px-5 py-6 whitespace-nowrap"><SweepInStatusBadge status={row.sweepInStatus} /></td>
-                  <td className="px-5 py-6 text-tableGrey whitespace-nowrap">{row.sweepInDate}</td>
-                  <td className="px-5 py-6">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="cursor-pointer">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="min-w-48">
-                        <DropdownMenuItem className="font-semibold text-customBlack p-4 cursor-default">Actions</DropdownMenuItem>
-                        <hr />
-                        <DropdownMenuItem className="p-4 text-sm cursor-pointer" onClick={() => console.log("View", row)}>
-                          View Details
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              {error ? (
+                <tr>
+                  <td colSpan={11} className="text-center py-16 text-grey text-sm">
+                    Unable to load data. Please try again.
                   </td>
                 </tr>
-              ))}
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={11} className="text-center py-16 text-grey text-sm">
+                    No sweep-in entries found.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((row, i) => (
+                  <tr key={row.id ?? i}>
+                    <td className="px-5 py-6 text-tableGrey whitespace-nowrap">{row.product_no}</td>
+                    <td className="px-5 py-6 text-tableGrey whitespace-nowrap">{row.product_type}</td>
+                    <td className="px-5 py-6 text-tableGrey whitespace-nowrap">{row.account_name}</td>
+                    <td className="px-5 py-6 text-tableGrey whitespace-nowrap">{row.bvn}</td>
+                    <td className="px-5 py-6 text-tableGrey whitespace-nowrap">{row.account_type}</td>
+                    <td className="px-5 py-6 text-tableGrey whitespace-nowrap">{row.event}</td>
+                    <td className="px-5 py-6 text-tableGrey whitespace-nowrap">{fmtNum(row.transaction_amount)}</td>
+                    <td className="px-5 py-6 text-tableGrey whitespace-nowrap">{fmtDate(row.transaction_date)}</td>
+                    <td className="px-5 py-6 whitespace-nowrap"><SweepInStatusBadge status={row.sweep_in_status} /></td>
+                    <td className="px-5 py-6 text-tableGrey whitespace-nowrap">{fmtDate(row.sweep_in_date)}</td>
+                    <td className="px-5 py-6 text-tableGrey max-w-xs truncate">{row.narration}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
         <footer className="p-4 border-t border-borderGrey">
-          <Pagination currentPage={currentPage} totalPages={data.totalPages} onPageChange={setCurrentPage} />
+          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
         </footer>
       </section>
     </section>

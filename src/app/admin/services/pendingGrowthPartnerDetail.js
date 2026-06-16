@@ -1,35 +1,25 @@
 import { routes } from "./apiRoutes"
 import HttpService from "./httpService"
 
-const MOCK_DATA = {
-  pageTitle: "User Details",
-  pageSubtitle: "Showing user information",
-  partner: {
-    id: "1",
-    name: "John Doe",
-    status: "Pending",
-    bvn: "39029028428",
-    email: "sale@kodvest.com",
-    phone: "+2348030516178",
-    dateJoined: "Mar 21, 2021",
-    address: "10, Alfred Rewane Road, Lekki, Lagos",
-    city: "Lagos",
-    state: "Lagos",
-  },
-  actions: [
-    { title: "View KYC Documents" },
-    { title: "Approve Account" },
-    { title: "Delete Account" },
-  ],
+export const getPendingGrowthPartnerDetail = async (gp_id) => {
+  const apiRoute = routes.PendingGrowthPartnerDetails()
+  const http = new HttpService()
+  const response = await http.postData({ id: Number(gp_id) }, apiRoute)
+  return response.data  // { res, data: { gp_information }, messg }
 }
 
-export const getPendingGrowthPartnerDetail = async (id) => {
-  const apiRoute = routes.PendingGrowthPartnerDetails(id)
-  try {
-    const http = new HttpService()
-    const response = await http.getData(apiRoute)
-    return response?.data ?? MOCK_DATA
-  } catch {
-    return { ...MOCK_DATA, partner: { ...MOCK_DATA.partner, id } }
-  }
+export const getGpKycDocuments = async (gp_id) => {
+  const apiRoute = routes.GpKycDocuments()
+  const http = new HttpService()
+  const response = await http.postData({ id: Number(gp_id) }, apiRoute)
+  return response.data  // { res, data: { kyc_documents: [] }, messg }
+}
+
+export const gpKycDocAction = async ({ id, field_name, action, reason }) => {
+  const apiRoute = routes.GpKycDocAction()
+  const http = new HttpService()
+  const payload = { id, field_name, action }
+  if (reason) payload.reason = reason
+  const response = await http.postData(payload, apiRoute)
+  return response.data  // { res: 'success'|'failed', data: [], messg }
 }

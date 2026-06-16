@@ -3,33 +3,29 @@ import HttpService from "./httpService"
 
 export const transferBetweenAccounts = async (data) => {
   const apiRoute = routes.TransferBetweenAccounts()
-  try {
-    const http = new HttpService()
-    const response = await http.postData(data, apiRoute)
-    return response?.data ?? data
-  } catch {
-    return { success: false, apiRoute }
-  }
+  const http = new HttpService()
+  const response = await http.postData(data, apiRoute)
+  return response?.data
 }
 
 export const debitFromAccount = async (data) => {
   const apiRoute = routes.DebitFromAccount()
-  try {
-    const http = new HttpService()
-    const response = await http.postData(data, apiRoute)
-    return response?.data ?? data
-  } catch {
-    return { success: false, apiRoute }
-  }
+  const http = new HttpService()
+  const response = await http.postData(data, apiRoute)
+  return response?.data
 }
 
 export const getAccountOptions = async () => {
-  const apiRoute = routes.AccountListForTransfer()
+  const apiRoute = routes.TransferFundsAccountsList()
   const http = new HttpService()
   const response = await http.postData({}, apiRoute)
   const accounts = response?.data?.data?.accounts ?? []
-  return accounts.map((a) => ({
-    value: a.account_number,
-    label: `${a.account_name} - ${a.account_number} (${a.bank_name})`,
-  }))
+  return accounts
+    .filter((a) => a.account_number)
+    .map((a) => ({
+      value: a.account_number,
+      label: a.account_name
+        ? `${a.account_name} - ${a.account_number}`
+        : a.account_number,
+    }))
 }

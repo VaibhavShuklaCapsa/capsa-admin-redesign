@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { MoreHorizontal, Search, ChevronDown } from "lucide-react"
 import Pagination from "../components/Pagination/Pagination"
 import PageLoader from "../components/ui/PageLoader"
@@ -35,67 +35,59 @@ import {
 import { toast } from "react-toastify"
 import { SuccessToast, ErrorToast } from "../components/toast"
 
-const TABLE_HEADER = [
-  { key: "Account Name",   title: "accountName"  },
-  { key: "Email Address",  title: "email"        },
-  { key: "Account Type",   title: "accountType"  },
-]
-
-const ROWS = [
-  { id:"1", accountName:"Stanbic IBTC Bank Plc", email:"force@stanbic.com",  accountType:"Investor" },
-  { id:"2", accountName:"Shell PLC",             email:"silver@shell.com",   accountType:"Vendor"   },
-  { id:"3", accountName:"Stanbic IBTC Bank Plc", email:"force@stanbic.com",  accountType:"Vendor"   },
-  { id:"4", accountName:"Delloite Nigeria",       email:"admin@delloite.com", accountType:"Vendor"   },
-  { id:"5", accountName:"Stanbic IBTC Bank Plc", email:"force@stanbic.com",  accountType:"Vendor"   },
-  { id:"6", accountName:"Stanbic IBTC Bank Plc", email:"force@stanbic.com",  accountType:"Investor" },
-  { id:"7", accountName:"Stanbic IBTC Bank Plc", email:"force@stanbic.com",  accountType:"Investor" },
-  { id:"8", accountName:"Stanbic IBTC Bank Plc", email:"force@stanbic.com",  accountType:"Investor" },
-  { id:"9", accountName:"Stanbic IBTC Bank Plc", email:"force@stanbic.com",  accountType:"Vendor"   },
-]
-
+const PAGE_SIZE = 10
 const USER_FILTER_OPTIONS = ["All Users", "Vendors", "Investors"]
 
-const PAGE_DATA = {
-  pageTitle:   "Push Notifications",
-  pageSubtitle:"Send push notifications to users",
-  tableHeader: TABLE_HEADER,
-  rows:        ROWS,
-  totalPages:  10,
-}
-
 export default function PushNotificationsPage() {
-  const [data, setData]             = useState(null)
-  const [loading, setLoading]       = useState(true)
-  const [search, setSearch]         = useState("")
-  const [userFilter, setUserFilter] = useState("All Users")
+  const [loading, setLoading]         = useState(true)
+  const [rows, setRows]               = useState([])
+  const [totalPages, setTotalPages]   = useState(1)
   const [currentPage, setCurrentPage] = useState(1)
+  const [search, setSearch]           = useState("")
+  const [userFilter, setUserFilter]   = useState("All Users")
 
   // Modal state
-  const [modalOpen, setModalOpen]   = useState(false)
-  const [modalTarget, setModalTarget] = useState(null) // null = batch, row = single
-  const [notifTitle, setNotifTitle] = useState("")
+  const [modalOpen, setModalOpen]       = useState(false)
+  const [modalTarget, setModalTarget]   = useState(null)
+  const [notifTitle, setNotifTitle]     = useState("")
   const [notifContent, setNotifContent] = useState("")
-  const [sending, setSending]       = useState(false)
+  const [sending, setSending]           = useState(false)
+
+  const fetchData = async ({ page = 1, searchVal = "" }) => {
+    const res = await getPushNotificationsData({ page_number: page, page_size: PAGE_SIZE, search: searchVal })
+    setRows(res?.data?.user_list ?? [])
+    setTotalPages(res?.data?.pagination?.total_pages ?? 1)
+  }
 
   useEffect(() => {
-    setLoading(true)
-    getPushNotificationsData(PAGE_DATA).then((res) => {
-      setData(res)
-      setLoading(false)
-    })
+    fetchData({ page: 1 })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const filtered = useMemo(() => {
-    if (!data) return []
-    const q = search.toLowerCase().trim()
-    return data.rows.filter((r) => {
-      const matchFilter = userFilter === "All Users" ||
-        (userFilter === "Vendors" && r.accountType === "Vendor") ||
-        (userFilter === "Investors" && r.accountType === "Investor")
-      const matchSearch = !q || r.email.toLowerCase().includes(q) || r.accountName.toLowerCase().includes(q)
-      return matchFilter && matchSearch
-    })
-  }, [data, search, userFilter])
+  const handleSearch = (val) => {
+    setSearch(val)
+    setCurrentPage(1)
+    fetchData({ page: 1, searchVal: val }).catch(() => {})
+  }
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+    fetchData({ page, searchVal: search }).catch(() => {})
+  }
+
+  const handleFilterChange = (opt) => {
+    setUserFilter(opt)
+    setCurrentPage(1)
+    fetchData({ page: 1, searchVal: search }).catch(() => {})
+  }
+
+  const filteredRows = rows.filter((r) => {
+    if (userFilter === "Vendors")   return r.account_type === "Vendor"
+    if (userFilter === "Investors") return r.account_type === "Investor"
+    return true
+  })
 
   const openModal = (row = null) => {
     setModalTarget(row)
@@ -106,21 +98,30 @@ export default function PushNotificationsPage() {
 
   const handleSend = async () => {
     setSending(true)
-    const payload = { title: notifTitle, content: notifContent, target: modalTarget }
     try {
-      const res = modalTarget
-        ? await sendPushNotification(payload)
-        : await sendBatchPushNotification(payload)
-      if (res?.res === "success") {
-        toast(<SuccessToast message={res?.messg} />, { style: { padding: 0 } })
+      if (modalTarget) {
+        // Single notification
+        const res = await sendPushNotification({ email: modalTarget.email, title: notifTitle, body: notifContent })
+        if (res?.res === "success") {
+          toast(<SuccessToast message={res?.messg} />, { style: { padding: 0 } })
+          fetchData({ page: currentPage, searchVal: search }).catch(() => {})
+        } else {
+          toast(<ErrorToast message={res?.messg || "Failed to send notification"} />, { style: { padding: 0 } })
+        }
       } else {
-        toast(<ErrorToast message={res?.messg} />, { style: { padding: 0 } })
+        // Batch notification
+        const res = await sendBatchPushNotification({ title: notifTitle, body: notifContent })
+        if (res?.res === "success") {
+          toast(<SuccessToast message={res?.messg} />, { style: { padding: 0 } })
+          fetchData({ page: currentPage, searchVal: search }).catch(() => {})
+        } else {
+          toast(<ErrorToast message={res?.messg || "Failed to send notification"} />, { style: { padding: 0 } })
+        }
       }
     } catch {
       toast(<ErrorToast message="Something went wrong. Please try again." />, { style: { padding: 0 } })
     } finally {
       setSending(false)
-      setModalOpen(false)
     }
   }
 
@@ -130,8 +131,8 @@ export default function PushNotificationsPage() {
     <section className="space-y-6">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-customBlack mb-1">{data.pageTitle}</h2>
-          <p className="text-sm text-grey">{data.pageSubtitle}</p>
+          <h2 className="text-2xl font-bold text-customBlack mb-1">Push Notifications</h2>
+          <p className="text-sm text-grey">Send push notifications to users</p>
         </div>
         <Button
           className="bg-blue hover:bg-blue/90 text-white rounded-lg px-5 h-10 shrink-0"
@@ -149,8 +150,8 @@ export default function PushNotificationsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-grey" />
             <Input
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
-              placeholder="Search by email"
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="Search by email or name"
               className="pl-9 h-10 border-borderGrey bg-white"
             />
           </div>
@@ -167,7 +168,7 @@ export default function PushNotificationsPage() {
                 <DropdownMenuItem
                   key={opt}
                   className="cursor-pointer"
-                  onClick={() => { setUserFilter(opt); setCurrentPage(1) }}
+                  onClick={() => handleFilterChange(opt)}
                 >
                   {opt}
                 </DropdownMenuItem>
@@ -181,56 +182,58 @@ export default function PushNotificationsPage() {
           <Table>
             <TableHeader className="bg-white">
               <TableRow className="bg-white">
-                {data.tableHeader.map((col) => (
-                  <TableHead key={col.key} className="px-6 py-6 text-left font-bold text-grey whitespace-nowrap">
-                    {col.key}
-                  </TableHead>
-                ))}
+                <TableHead className="px-6 py-6 text-left font-bold text-grey whitespace-nowrap">Account Name</TableHead>
+                <TableHead className="px-6 py-6 text-left font-bold text-grey whitespace-nowrap">Email Address</TableHead>
+                <TableHead className="px-6 py-6 text-left font-bold text-grey whitespace-nowrap">Account Type</TableHead>
                 <TableHead className="px-6 py-6 text-left font-bold text-grey">Actions</TableHead>
               </TableRow>
             </TableHeader>
 
             <TableBody className="bg-white">
-              {filtered.map((row) => (
-                <TableRow key={row.id}>
-                  {data.tableHeader.map((col) => (
-                    <TableCell key={col.key} className="px-6 py-6 text-tableGrey whitespace-nowrap">
-                      {row[col.title]}
-                    </TableCell>
-                  ))}
-                  <TableCell className="px-6 py-6">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="cursor-pointer">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="min-w-48">
-                        <DropdownMenuItem className="font-semibold text-customBlack p-4 cursor-default">
-                          Actions
-                        </DropdownMenuItem>
-                        <hr />
-                        <DropdownMenuItem
-                          className="p-4 text-sm cursor-pointer"
-                          onClick={() => openModal(row)}
-                        >
-                          Send Notification
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              {filteredRows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-16 text-grey text-sm">
+                    No users found.
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredRows.map((row, i) => (
+                  <TableRow key={row.email ?? i}>
+                    <TableCell className="px-6 py-6 text-tableGrey whitespace-nowrap">
+                      {row.account_name || "—"}
+                    </TableCell>
+                    <TableCell className="px-6 py-6 text-tableGrey whitespace-nowrap">{row.email}</TableCell>
+                    <TableCell className="px-6 py-6 text-tableGrey whitespace-nowrap">{row.account_type}</TableCell>
+                    <TableCell className="px-6 py-6">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="cursor-pointer">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="min-w-48">
+                          <DropdownMenuItem className="font-semibold text-customBlack p-4 cursor-default">
+                            Actions
+                          </DropdownMenuItem>
+                          <hr />
+                          <DropdownMenuItem
+                            className="p-4 text-sm cursor-pointer"
+                            onClick={() => openModal(row)}
+                          >
+                            Send Notification
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
 
         <footer className="p-4 border-t border-borderGrey">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={data.totalPages}
-            onPageChange={setCurrentPage}
-          />
+          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
         </footer>
       </section>
 

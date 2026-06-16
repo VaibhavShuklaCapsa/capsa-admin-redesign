@@ -1,24 +1,16 @@
 import { routes } from "./apiRoutes"
 import HttpService from "./httpService"
 
-export const getBlockedAmountData = async (data) => {
+export const getBlockedAmountData = async ({ page_number = 1, page_size = 10, search = "", from_date = "", to_date = "" } = {}) => {
   const apiRoute = routes.BlockedAmount()
-  try {
-    const http = new HttpService()
-    const response = await http.postData(data, apiRoute)
-    return response?.data ?? data
-  } catch {
-    return { ...data, apiRoute }
-  }
+  const http = new HttpService()
+  const response = await http.postData({ page_number, page_size, search, from_date, to_date }, apiRoute)
+  return response.data  // { res, data: { blocked_list, pagination, filters }, messg }
 }
 
-export const unblockAmount = async (data) => {
+export const unblockAmount = async ({ nadId, account_number, order_number }) => {
   const apiRoute = routes.UnblockAmount()
-  try {
-    const http = new HttpService()
-    const response = await http.postData(data, apiRoute)
-    return response?.data ?? data
-  } catch {
-    return { success: false, apiRoute }
-  }
+  const http = new HttpService()
+  const response = await http.postData({ nadId, account_number, order_number }, apiRoute)
+  return response.data  // { res, data, messg }
 }

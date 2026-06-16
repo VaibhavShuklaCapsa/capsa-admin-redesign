@@ -1,13 +1,9 @@
 import { routes } from "./apiRoutes"
 import HttpService from "./httpService"
 
-export const getRevenueData = async (data) => {
+export const getRevenueData = async ({ page_number = 1, page_size = 10, from_date = "", to_date = "" } = {}) => {
   const apiRoute = routes.AdminRevenue()
-  try {
-    const http = new HttpService()
-    const response = await http.postData(data, apiRoute)
-    return response?.data ?? data
-  } catch {
-    return { ...data, apiRoute }
-  }
+  const http = new HttpService()
+  const response = await http.postData({ page_number, page_size, from_date, to_date }, apiRoute)
+  return response.data  // { res, data: { revenue_list, pagination, filters }, messg }
 }

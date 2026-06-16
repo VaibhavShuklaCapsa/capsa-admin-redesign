@@ -1,35 +1,23 @@
 import { routes } from "./apiRoutes"
 import HttpService from "./httpService"
 
-export const getPendingVendors = async (data) => {
+export const getPendingVendors = async ({ page_number = 1, page_size = 10, search = "", from_date = "", to_date = "" } = {}) => {
   const apiRoute = routes.PendingVendors()
-  try {
-    const http = new HttpService()
-    const response = await http.postData(data, apiRoute)
-    return response?.data ?? data
-  } catch {
-    return { ...data, apiRoute }
-  }
+  const http = new HttpService()
+  const response = await http.postData({ page_number, page_size, search, from_date, to_date }, apiRoute)
+  return response.data  // { res, data: { pending_list, pagination, filters }, messg }
 }
 
-export const getPendingInvestors = async (data) => {
+export const getPendingInvestors = async ({ page_number = 1, page_size = 10, search = "", from_date = "", to_date = "" } = {}) => {
   const apiRoute = routes.PendingInvestors()
-  try {
-    const http = new HttpService()
-    const response = await http.postData(data, apiRoute)
-    return response?.data ?? data
-  } catch {
-    return { ...data, apiRoute }
-  }
+  const http = new HttpService()
+  const response = await http.postData({ page_number, page_size, search, from_date, to_date }, apiRoute)
+  return response.data
 }
 
-export const getPendingGrowthPartners = async (data) => {
+export const getPendingGrowthPartners = async ({ page_number = 1, page_size = 10, search = "", from_date = "", to_date = "" } = {}) => {
   const apiRoute = routes.PendingGrowthPartners()
-  try {
-    const http = new HttpService()
-    const response = await http.postData(data, apiRoute)
-    return response?.data ?? data
-  } catch {
-    return { ...data, apiRoute }
-  }
+  const http = new HttpService()
+  const response = await http.postData({ page_number, page_size, search, from_date, to_date }, apiRoute)
+  return response.data
 }

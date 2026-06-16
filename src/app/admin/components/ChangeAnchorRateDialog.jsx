@@ -1,0 +1,105 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "./ui/dialog"
+import { changeAnchorRate } from "../services/anchorDetail"
+import { toast } from "react-toastify"
+import { SuccessToast, ErrorToast } from "./toast"
+
+export default function ChangeAnchorRateDialog({ open, onOpenChange, panNumber, currentRate, onSuccess }) {
+  const [rate, setRate]           = useState(currentRate ?? "")
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (open) setRate(currentRate ?? "")
+  }, [open, currentRate])
+
+  const handleUpdate = async () => {
+    setSubmitting(true)
+    try {
+      const res = await changeAnchorRate({ panNumber, rate: String(rate) })
+      if (res?.res === "success") {
+        toast(<SuccessToast message={res?.messg ?? "Rate updated successfully."} />, { style: { padding: 0 } })
+        onOpenChange(false)
+        onSuccess?.()
+      } else {
+        toast(<ErrorToast message={res?.messg ?? "Failed to update rate."} />, { style: { padding: 0 } })
+      }
+    } catch {
+      toast(<ErrorToast message="Something went wrong. Please try again." />, { style: { padding: 0 } })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="p-0 gap-0 border border-[#E4E4E7] shadow-lg rounded-[8px]"
+        style={{ width: "652px", maxWidth: "652px" }}
+      >
+        <div className="flex flex-col gap-6 p-6">
+          {/* Header */}
+          <DialogTitle
+            style={{
+              fontSize: "18px",
+              fontWeight: 700,
+              lineHeight: "140%",
+              color: "#09090B",
+            }}
+          >
+            Change Anchor Rate
+          </DialogTitle>
+
+          <hr className="border-[#E4E4E7] -mx-6" />
+
+          {/* Rate input */}
+          <div className="flex flex-col gap-3">
+            <label
+              style={{
+                fontSize: "18px",
+                fontWeight: 500,
+                lineHeight: "140%",
+                color: "#09090B",
+              }}
+            >
+              Anchor Rate (%)
+            </label>
+            <input
+              type="number"
+              value={rate}
+              onChange={(e) => setRate(e.target.value)}
+              placeholder="0"
+              className="w-full border border-[#E4E4E7] rounded-lg px-4 h-12 text-base text-[#09090B] bg-white outline-none focus:border-[#0098DB] placeholder:text-grey"
+            />
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-end">
+            <button
+              onClick={handleUpdate}
+              disabled={submitting || rate === ""}
+              style={{
+                height: "44px",
+                padding: "8px 16px",
+                borderRadius: "8px",
+                background: "#0098DB",
+                color: "#FAFAFA",
+                fontSize: "16px",
+                fontWeight: 500,
+                lineHeight: "140%",
+                opacity: submitting || rate === "" ? 0.7 : 1,
+              }}
+            >
+              {submitting ? "Updating..." : "Update"}
+            </button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}

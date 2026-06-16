@@ -14,9 +14,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu"
-import { getTransactionLedgerAccountsData } from "../services/transactionLedgerAccounts"
+import { getTransactionLedgerAccountsData, reverseTransactionAccount } from "../services/transactionLedgerAccounts"
 import { toast } from "react-toastify"
 import { ErrorToast } from "../components/toast"
+import { Dialog, DialogContent } from "../components/ui/dialog"
 
 const PAGE_SIZE = 10
 
@@ -43,6 +44,68 @@ function StatusBadge({ status }) {
   )
 }
 
+function ReverseTransactionModal({ open, onClose, row, onSuccess }) {
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleReverse = async () => {
+    setSubmitting(true)
+    try {
+      const res = await reverseTransactionAccount({ id: row?.id })
+      if (res?.res === "success") {
+        onClose()
+        onSuccess?.()
+      } else {
+        toast(<ErrorToast message={res?.messg || "Reversal failed"} />, { style: { padding: 0 } })
+      }
+    } catch {
+      toast(<ErrorToast message="Something went wrong" />, { style: { padding: 0 } })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
+      <DialogContent
+        style={{
+          width: "451px", maxWidth: "451px",
+          padding: "24px",
+          display: "flex", flexDirection: "column",
+          alignItems: "flex-start",
+          gap: "24px",
+          borderRadius: "8px",
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%" }}>
+          <p style={{ fontFamily: "Satoshi", fontSize: "18px", fontWeight: 700, lineHeight: "140%", color: "#09090B", margin: 0 }}>
+            Reverse Transaction
+          </p>
+          <p style={{ fontFamily: "Satoshi", fontSize: "14px", fontWeight: 400, lineHeight: "140%", color: "#71717A", margin: 0 }}>
+            You are choosing to reverse this transaction. Do you wish to proceed?
+          </p>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", width: "100%" }}>
+          <button
+            onClick={onClose}
+            disabled={submitting}
+            style={{ display: "flex", height: "44px", padding: "8px 16px", justifyContent: "center", alignItems: "center", gap: "8px", borderRadius: "8px", border: "1px solid #E4E4E7", background: "transparent", cursor: "pointer", fontFamily: "Satoshi", fontSize: "16px", fontWeight: 500, lineHeight: "140%", color: "#09090B" }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleReverse}
+            disabled={submitting}
+            style={{ display: "flex", height: "44px", padding: "8px 16px", justifyContent: "center", alignItems: "center", gap: "8px", borderRadius: "8px", border: "none", background: "#0098DB", cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1, fontFamily: "Satoshi", fontSize: "16px", fontWeight: 500, lineHeight: "140%", color: "#FAFAFA" }}
+          >
+            {submitting ? "Reversing..." : "Yes, Reverse"}
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export default function TransactionLedgerAccountsPage() {
   const [loading, setLoading]         = useState(true)
   const [rows, setRows]               = useState([])
@@ -51,6 +114,7 @@ export default function TransactionLedgerAccountsPage() {
   const [search, setSearch]           = useState("")
   const [fromDate, setFromDate]       = useState("")
   const [toDate, setToDate]           = useState("")
+  const [reverseRow, setReverseRow]   = useState(null)
 
   const fetchData = async ({ page = 1, searchVal = "", from = "", to = "" }) => {
     const res = await getTransactionLedgerAccountsData({ page_number: page, page_size: PAGE_SIZE, search: searchVal, from_date: from, to_date: to })
@@ -170,7 +234,7 @@ export default function TransactionLedgerAccountsPage() {
                           <hr />
                           <DropdownMenuItem
                             className="p-4 text-sm cursor-pointer"
-                            onClick={() => console.log("Reverse", row)}
+                            onClick={() => setReverseRow(row)}
                           >
                             Reverse Transaction
                           </DropdownMenuItem>
@@ -188,6 +252,13 @@ export default function TransactionLedgerAccountsPage() {
           <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
         </footer>
       </section>
+
+      <ReverseTransactionModal
+        open={!!reverseRow}
+        onClose={() => setReverseRow(null)}
+        row={reverseRow}
+        onSuccess={() => fetchData({ page: currentPage, searchVal: search, from: fromDate, to: toDate }).catch(() => {})}
+      />
     </section>
   )
 }

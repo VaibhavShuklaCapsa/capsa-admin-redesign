@@ -547,7 +547,7 @@ export const routes = {
 
     // Manual Settlement
     ManualSettlementInvoices: () => {
-        return `/redesign/admin/settlement-rf-list`
+        return `/redesign/admin/settlement-invoice-list`
     },
     SettlementInvoiceApply: () => {
         return `/redesign/admin/settlement-invoice-apply`
@@ -567,23 +567,32 @@ export const routes = {
     ManualSettlementAssets: () => {
         return `/redesign/admin/settlement-asset-list`
     },
+    SettlementAssetApply: () => {
+        return `/redesign/admin/settlement-asset-apply`
+    },
 
     // Transaction Ledger (Accounts)
     TransactionLedgerAccounts: () => {
         return `/redesign/admin/transaction-ledger-accounts`
+    },
+    TransactionReverseAccounts: () => {
+        return `/redesign/admin/transaction-reverse-accounts`
     },
 
     // Transaction Ledger (Wallets)
     TransactionLedgerWallets: () => {
         return `/redesign/admin/transaction-ledger-wallets`
     },
+    TransactionWalletReverse: () => {
+        return `/redesign/admin/transaction-wallet-reverse`
+    },
 
     // Reconciliation
     Reconciliation: () => {
-        return `/dashboard/a/reconciliation`
+        return `/redesign/admin/reconciliation`
     },
     ReconciliationBalanceHistory: () => {
-        return `/dashboard/a/reconciliation/balanceHistory`
+        return `/redesign/admin/balance-history`
     },
     ReconciliationAccountStatement: () => {
         return `/dashboard/a/reconciliation/accountStatement`
@@ -591,55 +600,124 @@ export const routes = {
 
     // Pending Accounts
     PendingVendors: () => {
-        return `/dashboard/a/pendingAccounts/vendors`
+        return `/redesign/admin/vendor-pending-list`
     },
-    PendingVendorDetails: (id) => {
-        return `/dashboard/a/pendingAccounts/vendors/${id}`
+    PendingVendorDetails: () => {
+        return `/redesign/admin/vendor-details`
+    },
+    PendingVendorKycDocuments: () => {
+        return `/redesign/admin/vendor-kyc-documents`
+    },
+    VerifyVendorBvn: () => {
+        return `/redesign/admin/verify-bvn`
+    },
+    VerifyVendorTin: () => {
+        return `/redesign/admin/verify-tin`
+    },
+    VerifyVendorNin: () => {
+        return `/redesign/admin/verify-nin`
+    },
+    VendorKycDocAction: () => {
+        return `/redesign/admin/vendor-kyc-doc-action`
+    },
+    VendorAccountLetters: () => {
+        return `/redesign/admin/vendor-account-letters`
     },
     PendingInvestors: () => {
-        return `/dashboard/a/pendingAccounts/investors`
+        return `/redesign/admin/investor-pending-list`
     },
-    PendingInvestorDetails: (id) => {
-        return `/dashboard/a/pendingAccounts/investors/${id}`
+    PendingInvestorDetails: () => {
+        return `/redesign/admin/pending-investor-details`
+    },
+    InvestorKycDocuments: () => {
+        return `/redesign/admin/investor-kyc-documents`
+    },
+    InvestorKycDocAction: () => {
+        return `/redesign/admin/investor-kyc-doc-action`
     },
     PendingGrowthPartners: () => {
-        return `/dashboard/a/pendingAccounts/growthPartners`
+        return `/redesign/admin/gp-pending-list`
     },
-    PendingGrowthPartnerDetails: (id) => {
-        return `/dashboard/a/pendingAccounts/growthPartners/${id}`
+    PendingGrowthPartnerDetails: () => {
+        return `/redesign/admin/gp-details`
+    },
+    GpKycDocuments: () => {
+        return `/redesign/admin/gp-kyc-documents`
+    },
+    GpKycDocAction: () => {
+        return `/redesign/admin/gp-kyc-doc-action`
     },
 
     // Deleted Accounts
     DeletedVendors: () => {
-        return `/dashboard/a/deletedAccounts/vendors`
+        return `/redesign/admin/deleted-vendors-list`
     },
     DeletedInvestors: () => {
-        return `/dashboard/a/deletedAccounts/investors`
+        return `/redesign/admin/deleted-investors-list`
+    },
+    AnchorsList: () => {
+        return `/redesign/admin/anchors-list`
+    },
+    AnchorDetails: () => {
+        return `/redesign/admin/anchor-details`
+    },
+    AnchorEditGrade: () => {
+        return `/redesign/admin/anchor-edit-grade`
+    },
+    AnchorChangeRate: () => {
+        return `/redesign/admin/anchor-change-rate`
+    },
+    AnchorToggleRF: () => {
+        return `/redesign/admin/anchor-toggle-rf`
+    },
+    AnchorEditEmail: () => {
+        return `/redesign/admin/anchor-edit-email`
+    },
+    AnchorSubAdminList: () => {
+        return `/redesign/admin/anchor-sub-admin-list`
+    },
+    AnchorSubAdminAdd: () => {
+        return `/redesign/admin/anchor-sub-admin-add`
+    },
+    AnchorSubAdminDelete: () => {
+        return `/redesign/admin/anchor-sub-admin-delete`
+    },
+    AnchorSubAdminEdit: () => {
+        return `/redesign/admin/anchor-sub-admin-edit`
+    },
+    AddAnchorBusinessInfo: () => {
+        return `/redesign/admin/add-anchor-business-info`
+    },
+    AddAnchorDocuments: () => {
+        return `/redesign/admin/add-anchor-documents`
     },
     DeletedAnchors: () => {
-        return `/dashboard/a/deletedAccounts/anchors`
+        return `/redesign/admin/deleted-anchors-list`
     },
     DeletedGrowthPartners: () => {
-        return `/dashboard/a/deletedAccounts/growthPartners`
+        return `/redesign/admin/deleted-gp-list`
     },
 
     // Vendor Sweep-In List
     VendorSweepInList: () => {
-        return `/dashboard/a/vendorSweepIn`
+        return `/redesign/admin/vendor-sweep-in-list`
     },
 
     // Edit Invoice (Admin)
     AdminEditInvoiceList: () => {
-        return `/dashboard/a/editInvoice/list`
+        return `/redesign/admin/edit-invoice-list`
+    },
+    AdminEditInvoiceAnchorsList: () => {
+        return `/redesign/admin/edit-invoice-anchors-list`
     },
     AdminEditInvoiceDetails: () => {
-        return `/dashboard/a/editInvoice/details`
+        return `/redesign/admin/edit-invoice-details`
     },
-    AdminSaveEditedInvoice: () => {
-        return `/dashboard/a/editInvoice/save`
+    AdminEditInvoiceUpdate: () => {
+        return `/redesign/admin/edit-invoice-update`
     },
     AdminDeleteInvoice: () => {
-        return `/dashboard/a/editInvoice/delete`
+        return `/redesign/admin/edit-invoice-delete`
     },
 
     // Dashboard
@@ -652,31 +730,31 @@ export const routes = {
 
     // Revenue Amount Sterling
     RevenueAmountSterling: () => {
-        return `/dashboard/a/revenueAmount/sterling`
+        return `/redesign/admin/revenue-amount-sterling-list`
     },
 
     // Blocked Amount
     BlockedAmount: () => {
-        return `/dashboard/a/blockedAmount`
+        return `/redesign/admin/blocked-amount-list`
     },
     UnblockAmount: () => {
-        return `/dashboard/a/blockedAmount/unblock`
+        return `/redesign/admin/blocked-amount-unblock`
     },
 
     // Revenue Amount
     RevenueAmountInvoices: () => {
-        return `/dashboard/a/revenueAmount/invoices`
+        return `/redesign/admin/revenue-amount-invoice-list`
     },
     RevenueAmountRevenues: () => {
-        return `/dashboard/a/revenueAmount/revenues`
+        return `/redesign/admin/revenue-amount-revenue-list`
     },
     RevenueAmountAssets: () => {
-        return `/dashboard/a/revenueAmount/assets`
+        return `/redesign/admin/revenue-amount-asset-list`
     },
 
     // Revenue
     AdminRevenue: () => {
-        return `/dashboard/a/revenue`
+        return `/redesign/admin/revenue-list`
     },
 
     // Transfer Funds
@@ -689,15 +767,18 @@ export const routes = {
     GetAccountOptions: () => {
         return `/dashboard/a/transferFunds/accounts`
     },
+    TransferFundsAccountsList: () => {
+        return `/redesign/admin/transfer-funds-accounts-list`
+    },
 
     // Push Notifications
     PushNotificationsList: () => {
-        return `/dashboard/a/pushNotifications/list`
+        return `/redesign/admin/push-notifications-user-list`
     },
     SendPushNotification: () => {
-        return `/dashboard/a/pushNotifications/send`
+        return `/redesign/admin/push-send-single`
     },
     SendBatchPushNotification: () => {
-        return `/dashboard/a/pushNotifications/sendBatch`
+        return `/redesign/admin/push-send-batch`
     },
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ChevronDown } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs"
 import { Button } from "../components/ui/button"
@@ -11,44 +11,43 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu"
-import { transferBetweenAccounts, debitFromAccount } from "../services/transferFunds"
+import { transferBetweenAccounts, debitFromAccount, getAccountOptions } from "../services/transferFunds"
 import { toast } from "react-toastify"
 import { SuccessToast, ErrorToast } from "../components/toast"
 
-const ACCOUNT_OPTIONS = [
-  { value: "nodal-1", label: "Nodal Account 1 - 5130383439" },
-  { value: "nodal-2", label: "Nodal Account 2 - 0039234545" },
-  { value: "nodal-3", label: "Nodal Account 3 - 7823901234" },
-]
-
-function AccountSelect({ value, onChange, placeholder = "Select Account" }) {
-  const selected = ACCOUNT_OPTIONS.find((o) => o.value === value)
+function AccountSelect({ value, onChange, options = [], excludeValue = "", placeholder = "Select Account" }) {
+  const available = options.filter((o) => o.value !== excludeValue)
+  const selected = options.find((o) => o.value === value)
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button style={{ width: "100%" }} className="flex items-center justify-between border border-borderGrey rounded-lg px-4 h-11 text-sm bg-white focus:outline-none">
-          <span className={selected ? "text-customBlack" : "text-grey"}>
+          <span className={selected ? "text-customBlack truncate max-w-[90%] text-left" : "text-grey"}>
             {selected ? selected.label : placeholder}
           </span>
-          <ChevronDown className="size-4 text-grey shrink-0" />
+          <ChevronDown className="size-4 text-grey shrink-0 ml-2" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent style={{ width: "var(--radix-dropdown-menu-trigger-width)" }}>
-        {ACCOUNT_OPTIONS.map((opt) => (
-          <DropdownMenuItem
-            key={opt.value}
-            className="cursor-pointer"
-            onClick={() => onChange(opt.value)}
-          >
-            {opt.label}
-          </DropdownMenuItem>
-        ))}
+      <DropdownMenuContent style={{ width: "var(--radix-dropdown-menu-trigger-width)" }} className="max-h-64 overflow-y-auto">
+        {available.length === 0 ? (
+          <DropdownMenuItem disabled className="text-grey text-sm">No accounts available</DropdownMenuItem>
+        ) : (
+          available.map((opt) => (
+            <DropdownMenuItem
+              key={opt.value}
+              className="cursor-pointer text-sm"
+              onClick={() => onChange(opt.value)}
+            >
+              {opt.label}
+            </DropdownMenuItem>
+          ))
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )
 }
 
-function TransferBetweenAccountsTab() {
+function TransferBetweenAccountsTab({ accounts }) {
   const [sourceAccount, setSourceAccount]       = useState("")
   const [sourceNarration, setSourceNarration]   = useState("")
   const [destAccount, setDestAccount]           = useState("")
@@ -86,7 +85,12 @@ function TransferBetweenAccountsTab() {
 
       <div className="space-y-2">
         <label className="text-sm font-medium text-customBlack">Source Account</label>
-        <AccountSelect value={sourceAccount} onChange={setSourceAccount} />
+        <AccountSelect
+          value={sourceAccount}
+          onChange={setSourceAccount}
+          options={accounts}
+          excludeValue={destAccount}
+        />
       </div>
 
       <div className="space-y-2">
@@ -101,7 +105,12 @@ function TransferBetweenAccountsTab() {
 
       <div className="space-y-2">
         <label className="text-sm font-medium text-customBlack">Destination Account</label>
-        <AccountSelect value={destAccount} onChange={setDestAccount} />
+        <AccountSelect
+          value={destAccount}
+          onChange={setDestAccount}
+          options={accounts}
+          excludeValue={sourceAccount}
+        />
       </div>
 
       <div className="space-y-2">
@@ -144,7 +153,7 @@ function TransferBetweenAccountsTab() {
   )
 }
 
-function DebitFromAccountTab() {
+function DebitFromAccountTab({ accounts }) {
   const [sourceAccount, setSourceAccount]     = useState("")
   const [sourceNarration, setSourceNarration] = useState("")
   const [amount, setAmount]                   = useState("")
@@ -178,7 +187,11 @@ function DebitFromAccountTab() {
 
       <div className="space-y-2">
         <label className="text-sm font-medium text-customBlack">Source Account</label>
-        <AccountSelect value={sourceAccount} onChange={setSourceAccount} />
+        <AccountSelect
+          value={sourceAccount}
+          onChange={setSourceAccount}
+          options={accounts}
+        />
       </div>
 
       <div className="space-y-2">
@@ -222,6 +235,14 @@ function DebitFromAccountTab() {
 }
 
 export default function TransferFundsPage() {
+  const [accounts, setAccounts] = useState([])
+
+  useEffect(() => {
+    getAccountOptions()
+      .then(setAccounts)
+      .catch(() => setAccounts([]))
+  }, [])
+
   return (
     <section className="space-y-6">
       <header>
@@ -246,11 +267,11 @@ export default function TransferFundsPage() {
         </TabsList>
 
         <TabsContent value="transfer-between">
-          <TransferBetweenAccountsTab />
+          <TransferBetweenAccountsTab accounts={accounts} />
         </TabsContent>
 
         <TabsContent value="debit-from">
-          <DebitFromAccountTab />
+          <DebitFromAccountTab accounts={accounts} />
         </TabsContent>
       </Tabs>
     </section>

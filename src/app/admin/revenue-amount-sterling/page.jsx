@@ -1,18 +1,13 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { MoreHorizontal, Search } from "lucide-react"
+import { useEffect, useState } from "react"
+import { format } from "date-fns"
+import { Search } from "lucide-react"
 import DateRangePicker from "../components/ui/DateRangePicker"
 import Pagination from "../components/Pagination/Pagination"
 import PageLoader from "../components/ui/PageLoader"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu"
 import {
   Table,
   TableBody,
@@ -23,55 +18,76 @@ import {
 } from "../components/ui/table"
 import { getRevenueAmountSterlingData } from "../services/revenueAmountSterling"
 
-const ROWS = [
-  { id:"1", date:"Sept 30, 2021", invoiceNo:"IN0000001",  status:"Open",    vendor:"Normal Vendor", investor:"Mustapha Suberu",   invoiceAmount:"200,000,000", capsaFees:"20,000", sterlingFees:"20,000", totalFees:"40,000" },
-  { id:"2", date:"Sept 30, 2021", invoiceNo:"IN0000232",  status:"Open",    vendor:"Normal Vendor", investor:"Kodvest",           invoiceAmount:"200,000,000", capsaFees:"20,000", sterlingFees:"20,000", totalFees:"40,000" },
-  { id:"3", date:"Sept 21, 2021", invoiceNo:"INVG672627", status:"Open",    vendor:"Normal Vendor", investor:"Griffin Finance",   invoiceAmount:"200,000,000", capsaFees:"20,000", sterlingFees:"20,000", totalFees:"40,000" },
-  { id:"4", date:"Mar 21, 2021",  invoiceNo:"INVB47827",  status:"Open",    vendor:"Normal Vendor", investor:"Kudy Financials",   invoiceAmount:"200,000,000", capsaFees:"20,000", sterlingFees:"20,000", totalFees:"40,000" },
-  { id:"5", date:"Aug 21, 2021",  invoiceNo:"IN0000001",  status:"Open",    vendor:"Normal Vendor", investor:"ASPAC Cooperative", invoiceAmount:"200,000,000", capsaFees:"20,000", sterlingFees:"20,000", totalFees:"40,000" },
-  { id:"6", date:"Aug 21, 2021",  invoiceNo:"IN0000001",  status:"Open",    vendor:"Normal Vendor", investor:"Samiat Aremu",      invoiceAmount:"200,000,000", capsaFees:"20,000", sterlingFees:"20,000", totalFees:"40,000" },
-  { id:"7", date:"Aug 21, 2021",  invoiceNo:"IN0000001",  status:"Open",    vendor:"Normal Vendor", investor:"Mustapha Suberu",   invoiceAmount:"200,000,000", capsaFees:"20,000", sterlingFees:"20,000", totalFees:"40,000" },
-  { id:"8", date:"Aug 21, 2021",  invoiceNo:"IN0000001",  status:"Overdue", vendor:"Normal Vendor", investor:"Kodvest",           invoiceAmount:"200,000,000", capsaFees:"20,000", sterlingFees:"20,000", totalFees:"40,000" },
-  { id:"9", date:"Aug 21, 2021",  invoiceNo:"IN0000001",  status:"Overdue", vendor:"Normal Vendor", investor:"Griffin Finance",   invoiceAmount:"200,000,000", capsaFees:"20,000", sterlingFees:"20,000", totalFees:"40,000" },
-]
+const PAGE_SIZE = 10
 
-const PAGE_DATA = {
-  dateRangeLabel: "Jan 20, 2023 - Feb 09, 2023",
-  rows:           ROWS,
-  totalPages:     10,
+const fmtDate = (iso) => {
+  if (!iso) return ""
+  try { return format(new Date(iso), "MMM d, yyyy") } catch { return iso }
+}
+
+const fmtNum = (val) => {
+  if (val === null || val === undefined) return ""
+  return Number(val).toLocaleString("en-NG", { maximumFractionDigits: 2 })
 }
 
 function StatusBadge({ status }) {
-  const isOverdue = status === "Overdue"
+  const styles = {
+    Open:    "bg-[#EBF6FB] text-blue",
+    Overdue: "bg-[#FEE2E2] text-[#EF4444]",
+    Settled: "bg-lightGreen text-[#16A34A]",
+  }
   return (
-    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-      isOverdue ? "bg-[#FEE2E2] text-[#EF4444]" : "bg-[#EBF6FB] text-blue"
-    }`}>
+    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${styles[status] ?? "bg-gray-100 text-gray-600"}`}>
       {status}
     </span>
   )
 }
 
 export default function RevenueAmountSterlingPage() {
-  const [data, setData]               = useState(null)
   const [loading, setLoading]         = useState(true)
-  const [search, setSearch]           = useState("")
+  const [error, setError]             = useState(false)
+  const [rows, setRows]               = useState([])
+  const [totalPages, setTotalPages]   = useState(1)
   const [currentPage, setCurrentPage] = useState(1)
+  const [search, setSearch]           = useState("")
+  const [fromDate, setFromDate]       = useState("")
+  const [toDate, setToDate]           = useState("")
+
+  const fetchData = async ({ page = 1, searchVal = "", from = "", to = "" }) => {
+    try {
+      const res = await getRevenueAmountSterlingData({ page_number: page, page_size: PAGE_SIZE, search: searchVal, from_date: from, to_date: to })
+      setRows(res?.data?.revenue_amount_list ?? [])
+      setTotalPages(res?.data?.pagination?.total_pages ?? 1)
+      setError(false)
+    } catch {
+      setError(true)
+      setRows([])
+    }
+  }
 
   useEffect(() => {
-    setLoading(true)
-    getRevenueAmountSterlingData(PAGE_DATA).then((res) => {
-      setData(res)
-      setLoading(false)
-    })
+    fetchData({ page: 1 }).finally(() => setLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const filtered = useMemo(() => {
-    if (!data) return []
-    const q = search.toLowerCase().trim()
-    if (!q) return data.rows
-    return data.rows.filter((r) => r.invoiceNo.toLowerCase().includes(q))
-  }, [data, search])
+  const handleSearch = (val) => {
+    setSearch(val)
+    setCurrentPage(1)
+    fetchData({ page: 1, searchVal: val, from: fromDate, to: toDate })
+  }
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+    fetchData({ page, searchVal: search, from: fromDate, to: toDate })
+  }
+
+  const handleDateChange = (range) => {
+    if (!range?.from || !range?.to) return
+    const from = format(range.from, "yyyy-MM-dd")
+    const to   = format(range.to,   "yyyy-MM-dd")
+    setFromDate(from); setToDate(to); setCurrentPage(1)
+    fetchData({ page: 1, searchVal: search, from, to })
+  }
 
   if (loading) return <PageLoader />
 
@@ -83,7 +99,7 @@ export default function RevenueAmountSterlingPage() {
       </header>
 
       <div className="flex items-center justify-between gap-4">
-        <DateRangePicker label={data.dateRangeLabel} />
+        <DateRangePicker label="Select Date Range" onChange={handleDateChange} />
         <Button className="bg-blue hover:bg-blue/90 text-white rounded-lg px-5 h-10">Download</Button>
       </div>
 
@@ -93,7 +109,7 @@ export default function RevenueAmountSterlingPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-grey" />
             <Input
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
+              onChange={(e) => handleSearch(e.target.value)}
               placeholder="Search by invoice number"
               className="pl-9 h-10 border-borderGrey bg-white"
             />
@@ -113,41 +129,42 @@ export default function RevenueAmountSterlingPage() {
                 <TableHead className="px-4 py-5 text-left font-bold text-grey whitespace-nowrap">Capsa Fees (₦)</TableHead>
                 <TableHead className="px-4 py-5 text-left font-bold text-grey whitespace-nowrap">Sterling Fees (₦)</TableHead>
                 <TableHead className="px-4 py-5 text-left font-bold text-grey whitespace-nowrap">Total Fees (₦)</TableHead>
-                <TableHead className="px-4 py-5 text-left font-bold text-grey">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody className="bg-white">
-              {filtered.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell className="px-4 py-5 text-tableGrey whitespace-nowrap">{row.date}</TableCell>
-                  <TableCell className="px-4 py-5 text-tableGrey whitespace-nowrap">{row.invoiceNo}</TableCell>
-                  <TableCell className="px-4 py-5 whitespace-nowrap"><StatusBadge status={row.status} /></TableCell>
-                  <TableCell className="px-4 py-5 text-tableGrey whitespace-nowrap">{row.vendor}</TableCell>
-                  <TableCell className="px-4 py-5 text-tableGrey whitespace-nowrap">{row.investor}</TableCell>
-                  <TableCell className="px-4 py-5 text-tableGrey whitespace-nowrap">{row.invoiceAmount}</TableCell>
-                  <TableCell className="px-4 py-5 text-tableGrey whitespace-nowrap">{row.capsaFees}</TableCell>
-                  <TableCell className="px-4 py-5 text-tableGrey whitespace-nowrap">{row.sterlingFees}</TableCell>
-                  <TableCell className="px-4 py-5 text-tableGrey whitespace-nowrap">{row.totalFees}</TableCell>
-                  <TableCell className="px-4 py-5">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="cursor-pointer">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="min-w-48">
-                        <DropdownMenuItem className="font-semibold text-customBlack p-4 cursor-default">Actions</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              {error ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-16 text-grey text-sm">
+                    Unable to load data. Please try again.
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-16 text-grey text-sm">
+                    No sterling revenue entries found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rows.map((row, i) => (
+                  <TableRow key={row.revenue_id ?? i}>
+                    <TableCell className="px-4 py-5 text-tableGrey whitespace-nowrap">{fmtDate(row.date)}</TableCell>
+                    <TableCell className="px-4 py-5 text-tableGrey whitespace-nowrap">{row.invoice_no}</TableCell>
+                    <TableCell className="px-4 py-5 whitespace-nowrap"><StatusBadge status={row.status} /></TableCell>
+                    <TableCell className="px-4 py-5 text-tableGrey whitespace-nowrap">{row.vendor}</TableCell>
+                    <TableCell className="px-4 py-5 text-tableGrey whitespace-nowrap">{row.investor}</TableCell>
+                    <TableCell className="px-4 py-5 text-tableGrey whitespace-nowrap">{fmtNum(row.invoice_amount)}</TableCell>
+                    <TableCell className="px-4 py-5 text-tableGrey whitespace-nowrap">{fmtNum(row.capsa_fees)}</TableCell>
+                    <TableCell className="px-4 py-5 text-tableGrey whitespace-nowrap">{fmtNum(row.sterling_fees)}</TableCell>
+                    <TableCell className="px-4 py-5 text-tableGrey whitespace-nowrap">{fmtNum(row.total_fees)}</TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
 
         <footer className="p-4 border-t border-borderGrey">
-          <Pagination currentPage={currentPage} totalPages={data.totalPages} onPageChange={setCurrentPage} />
+          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
         </footer>
       </section>
     </section>
