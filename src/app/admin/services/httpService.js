@@ -1,100 +1,109 @@
-import axios from "axios";
-import { getAccessToken } from "../utils";
+import axios from "axios"
+import { getAccessToken } from "../utils"
+import { encryptPayload, decryptSigninResponse } from "../utils/encryption"
+
+// Signin / signup URLs return an encrypted response body — all other URLs return plain JSON.
+const isAuthUrl = (url) => url.includes("signin/") || url.includes("signup/")
 
 class HttpService {
   constructor() {
     this.baseUrl = process.env.NEXT_PUBLIC_BASE_URL
   }
 
-  postData = async (payload, url) => {
-    const AuthStr = "Bearer ".concat(getAccessToken());
-    return axios.post(this.baseUrl + url, payload, {
-      headers: {
-        Authorization: AuthStr,
-      },
-    });
-  };
+  #authHeader() {
+    return { Authorization: "Bearer ".concat(getAccessToken()) }
+  }
 
-  postFormData = async (formData, url) => {
-    const AuthStr = "Bearer ".concat(getAccessToken());
-    return axios.post(this.baseUrl + url, formData, {
-      headers: {
-        Authorization: AuthStr,
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-  };
+  // After every axios call: decrypt the response only for auth URLs.
+  // Only runs if response.data is a string — on dev (encrypt=false) axios already
+  // parses the JSON response into an object, so we leave it untouched.
+  async #processResponse(axiosPromise, url) {
+    const response = await axiosPromise
+    if (isAuthUrl(url) && typeof response.data === "string") {
+      response.data = decryptSigninResponse(response.data)
+    }
+    return response
+  }
 
-  postDataNull = async (
-    payload,
-    url,
-  ) => {
-    const AuthStr = "Bearer ".concat(getAccessToken());
-    return axios.post(this.baseUrl + url, payload, {
-      headers: {
-        Authorization: AuthStr,
-      },
+  postData = (payload, url) =>
+    this.#processResponse(
+      axios.post(this.baseUrl + url, encryptPayload(payload), {
+        headers: this.#authHeader(),
+      }),
+      url
+    )
 
-    });
-  };
+  // FormData carries files — payload encryption is skipped (binary multipart can't be
+  // AES-wrapped as a whole). Response decryption still runs for auth URLs.
+  postFormData = (formData, url) =>
+    this.#processResponse(
+      axios.post(this.baseUrl + url, formData, {
+        headers: {
+          ...this.#authHeader(),
+          "Content-Type": "multipart/form-data",
+        },
+      }),
+      url
+    )
 
-  postDataWithoutToken = async (payload, url, headers) => {
-    return axios.post(
-      this.baseUrl + url,
-      payload,
-      headers && {
-        headers,
-      }
-    );
-  };
+  postDataNull = (payload, url) =>
+    this.#processResponse(
+      axios.post(this.baseUrl + url, payload, {
+        headers: this.#authHeader(),
+      }),
+      url
+    )
 
-  getData = async (
-    url,
-  ) => {
-    const AuthStr = "Bearer ".concat(getAccessToken());
-    return axios.get(this.baseUrl + url, {
-      headers: {
-        Authorization: AuthStr,
-      },
-    });
-  };
+  postDataWithoutToken = (payload, url, headers) =>
+    this.#processResponse(
+      axios.post(
+        this.baseUrl + url,
+        encryptPayload(payload),
+        headers ? { headers } : undefined
+      ),
+      url
+    )
 
-  getDataWithoutToken = async (url) => {
-    return axios.get(this.baseUrl + url);
-  };
+  getData = (url) =>
+    this.#processResponse(
+      axios.get(this.baseUrl + url, {
+        headers: this.#authHeader(),
+      }),
+      url
+    )
 
-  getDataWithParam = async (
-    url,
-    data,
-  ) => {
-    const AuthStr = "Bearer ".concat(getAccessToken());
-    return axios.get(this.baseUrl + url, data, {
-      headers: {
-        Authorization: AuthStr,
-      },
-    });
-  };
+  getDataWithoutToken = (url) =>
+    this.#processResponse(axios.get(this.baseUrl + url), url)
 
-  putData = async (formData, url) => {
-    const AuthStr = "Bearer ".concat(getAccessToken());
-    return axios.put(this.baseUrl + url, formData, {
-      headers: {
-        Authorization: AuthStr,
-      },
-    });
-  };
+  getDataWithParam = (url, data) =>
+    this.#processResponse(
+      axios.get(this.baseUrl + url, data, {
+        headers: this.#authHeader(),
+      }),
+      url
+    )
 
-  putDataWithoutToken = async (formData, url) => {
-    return axios.put(this.baseUrl + url, formData);
-  };
+  putData = (formData, url) =>
+    this.#processResponse(
+      axios.put(this.baseUrl + url, encryptPayload(formData), {
+        headers: this.#authHeader(),
+      }),
+      url
+    )
 
-  deleteData = async (url) => {
-    const AuthStr = "Bearer ".concat(getAccessToken());
-    return axios.delete(this.baseUrl + url, {
-      headers: {
-        Authorization: AuthStr,
-      },
-    });
-  };
+  putDataWithoutToken = (formData, url) =>
+    this.#processResponse(
+      axios.put(this.baseUrl + url, encryptPayload(formData)),
+      url
+    )
+
+  deleteData = (url) =>
+    this.#processResponse(
+      axios.delete(this.baseUrl + url, {
+        headers: this.#authHeader(),
+      }),
+      url
+    )
 }
-export default HttpService;
+
+export default HttpService
