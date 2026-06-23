@@ -24,6 +24,15 @@ export const cancelAcceptedBid = async (dealId, invoiceNumber) => {
   return response.data  // { res, data, messg }
 }
 
+// Calls /redesign/admin/invoice-edit-due-date
+// payload: { invoice_number, new_due_date } — new_due_date: yyyy-mm-dd
+export const editInvoiceDueDate = async (invoiceNumber, newDueDate) => {
+  const apiRoute = routes.AdminInvoiceEditDueDate()
+  const http = new HttpService()
+  const response = await http.postData({ invoice_number: invoiceNumber, new_due_date: newDueDate }, apiRoute)
+  return response.data  // { res, data: { invoice_number, new_due_date, new_effective_due_date }, messg }
+}
+
 export const getAdminInvoicesList = async ({ page_number = 1, page_size = 10, type = "all", search = "", from_date = "", to_date = "" } = {}) => {
   const apiRoute = routes.AdminInvoicesList()
   const http = new HttpService()

@@ -94,9 +94,12 @@ export const getVendorDetailData = async (bvn) => {
     dateFounded:        fmtDate(d.vendor?.date_founded),
     tin:                d.vendor?.tin                ?? "",
     address:            d.vendor?.address            ?? "",
-    anchor:             Array.isArray(d.vendor?.anchors) && d.vendor.anchors.length > 0
-                          ? d.vendor.anchors.join(", ")
-                          : "",
+    anchor:             (() => {
+                          const a = d.vendor?.anchors
+                          if (Array.isArray(a)) return a.filter(Boolean).join(", ")
+                          if (typeof a === "string") return a.trim()
+                          return ""
+                        })(),
 
     // Director info
     directorName:         d.director?.name                 ?? "",

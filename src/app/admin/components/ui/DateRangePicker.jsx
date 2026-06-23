@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { format } from "date-fns"
+import { format, addMonths } from "date-fns"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Calendar } from "./calendar"
@@ -16,7 +16,9 @@ export default function DateRangePicker({
   value,
   onChange,
 }) {
-  const [range, setRange] = useState(value)
+  const [range, setRange]           = useState(value)
+  const [leftMonth, setLeftMonth]   = useState(new Date())
+  const [rightMonth, setRightMonth] = useState(addMonths(new Date(), 1))
 
   const displayLabel =
     range?.from && range?.to
@@ -45,8 +47,25 @@ export default function DateRangePicker({
           ) : null}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="end">
-        <Calendar mode="range" selected={range} onSelect={handleSelect} numberOfMonths={2} />
+      <PopoverContent className="w-auto p-0" align="end" collisionPadding={24}>
+        <div className="flex">
+          <Calendar
+            mode="range"
+            selected={range}
+            onSelect={handleSelect}
+            month={leftMonth}
+            onMonthChange={setLeftMonth}
+            disabled={range?.to ? { after: range.to } : undefined}
+          />
+          <Calendar
+            mode="range"
+            selected={range}
+            onSelect={handleSelect}
+            month={rightMonth}
+            onMonthChange={setRightMonth}
+            disabled={range?.from ? { before: range.from } : undefined}
+          />
+        </div>
       </PopoverContent>
     </Popover>
   )

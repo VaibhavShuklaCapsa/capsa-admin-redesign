@@ -12,18 +12,20 @@ import { addGuarantor } from "../../services/guarantors"
 
 export default function AddGuarantorPage() {
   const router = useRouter()
-  const [companyName, setCompanyName]       = useState("")
-  const [rcNumber, setRcNumber]             = useState("")
+  const [companyName, setCompanyName]         = useState("")
+  const [rcNumber, setRcNumber]               = useState("")
+  const [industry, setIndustry]               = useState("")
   const [financialReport, setFinancialReport] = useState(null)
-  const [submitting, setSubmitting]         = useState(false)
+  const [submitting, setSubmitting]           = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSubmitting(true)
 
     const formData = new FormData()
-    formData.append("name", companyName)              // API field: name
-    formData.append("rc_number", rcNumber)            // API field: rc_number
+    formData.append("name", companyName)
+    formData.append("rc_number", rcNumber)
+    formData.append("industry", industry)
     if (financialReport) {
       formData.append("financial_report", financialReport) // API field: financial_report
     }
@@ -78,6 +80,17 @@ export default function AddGuarantorPage() {
               value={rcNumber}
               onChange={(e) => setRcNumber(e.target.value)}
               placeholder="Enter RC Number"
+              className="h-12 border-borderGrey text-base font-normal"
+              required
+            />
+          </label>
+
+          <label className="space-y-2 text-base font-semibold text-customBlack">
+            Industry <span className="text-[#EF4444]">*</span>
+            <Input
+              value={industry}
+              onChange={(e) => setIndustry(e.target.value)}
+              placeholder="Enter Industry"
               className="h-12 border-borderGrey text-base font-normal"
               required
             />

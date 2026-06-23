@@ -48,7 +48,9 @@ export default function GrowthPartnersPage() {
 
   const fetchData = async ({ page = 1, searchVal = "", from = "", to = "" }) => {
     const res = await getGrowthPartnerList({ page_number: page, page_size: PAGE_SIZE, search: searchVal, from_date: from, to_date: to })
-    setPartners(res.data?.partner_list ?? [])
+    const list = res.data?.partner_list ?? []
+    console.log("Growth partner list sample:", list[0])
+    setPartners(list)
     setTotalPages(res.data?.pagination?.total_pages ?? 1)
     setTotalCount(res.data?.pagination?.total ?? 0)
     return res
@@ -150,7 +152,10 @@ export default function GrowthPartnersPage() {
                         <DropdownMenuContent align="end" className="min-w-48">
                           <DropdownMenuItem className="font-semibold text-customBlack p-4 cursor-default">Actions</DropdownMenuItem>
                           <hr />
-                          <DropdownMenuItem className="p-4 text-sm cursor-pointer" onClick={() => router.push(`/admin/growth-partners/${p.user_id}`)}>
+                          <DropdownMenuItem
+                            className="p-4 text-sm cursor-pointer"
+                            onSelect={() => router.push(`/admin/growth-partners/${p.user_id}`)}
+                          >
                             View User Details
                           </DropdownMenuItem>
                         </DropdownMenuContent>

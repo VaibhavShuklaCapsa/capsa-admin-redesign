@@ -18,7 +18,7 @@ import {
 import StatusBadge from "../../../components/ui/StatusBadge"
 import InfoField from "../../../components/ui/InfoField"
 import PageLoader from "../../../components/ui/PageLoader"
-import { getPendingVendorDetail, getVendorKycDocuments, verifyVendorBvn, verifyVendorTin, vendorKycDocAction, getVendorAccountLetters } from "../../../services/pendingVendorDetail"
+import { getPendingVendorDetail, getVendorKycDocuments, verifyVendorBvn, verifyVendorTin, verifyVendorNin, vendorKycDocAction, getVendorAccountLetters } from "../../../services/pendingVendorDetail"
 import { toast } from "react-toastify"
 import { ErrorToast, SuccessToast } from "../../../components/toast"
 
@@ -388,7 +388,7 @@ function KycDocCard({ doc, vendorId, onRefetch }) {
   )
 }
 
-function VerifiableField({ label, value, buttonLabel, onVerify }) {
+function VerifiableField({ label, value, buttonLabel, onVerify, onSuccess, verified }) {
   const [verifying, setVerifying] = useState(false)
 
   const handleClick = async () => {
@@ -398,6 +398,7 @@ function VerifiableField({ label, value, buttonLabel, onVerify }) {
       const res = await onVerify()
       if (res?.res === "success") {
         toast(<SuccessToast message={res?.messg || "Verified successfully."} />, { style: { padding: 0 } })
+        onSuccess?.()
       } else {
         toast(<ErrorToast message={res?.messg || "Verification failed."} />, { style: { padding: 0 } })
       }
@@ -412,14 +413,20 @@ function VerifiableField({ label, value, buttonLabel, onVerify }) {
     <section className="min-w-0">
       <p className="text-sm text-grey mb-1">{label}</p>
       <p className="text-sm font-semibold text-customBlack mb-2">{value || "—"}</p>
-      <Button
-        size="sm"
-        disabled={verifying || !onVerify}
-        onClick={handleClick}
-        className="bg-blue hover:bg-blue/90 text-white h-8 px-4 text-xs rounded-lg"
-      >
-        {verifying ? "Verifying..." : buttonLabel}
-      </Button>
+      {verified ? (
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-[#16A34A]">
+          <CheckCircle2 className="size-3.5" /> Verified
+        </span>
+      ) : (
+        <Button
+          size="sm"
+          disabled={verifying || !onVerify}
+          onClick={handleClick}
+          className="bg-blue hover:bg-blue/90 text-white h-8 px-4 text-xs rounded-lg"
+        >
+          {verifying ? "Verifying..." : buttonLabel}
+        </Button>
+      )}
     </section>
   )
 }
@@ -444,6 +451,17 @@ export default function PendingVendorDetailPage() {
   const [accounts, setAccounts]           = useState([])
   const [accLoading, setAccLoading]       = useState(false)
   const [accError, setAccError]           = useState(false)
+
+  const fetchVendorInfo = () => {
+    setLoading(true); setError(false)
+    getPendingVendorDetail(params.id)
+      .then((res) => {
+        setVendorInfo(res?.data?.vendor_information ?? null)
+        setDirectorsInfo(res?.data?.directors_information ?? null)
+      })
+      .catch(() => setError(true))
+      .finally(() => setLoading(false))
+  }
 
   const fetchKycDocuments = () => {
     setKycLoading(true); setKycError(false)
@@ -563,7 +581,9 @@ export default function PendingVendorDetailPage() {
                       label="BVN"
                       value={vendorInfo.bvn}
                       buttonLabel="Verify BVN"
+                      verified={vendorInfo.bvn_verified === true}
                       onVerify={() => verifyVendorBvn({ vendor_id: params.id, bvn: vendorInfo.bvn })}
+                      onSuccess={fetchVendorInfo}
                     />
                     <InfoField label="Email Address" value={vendorInfo.email || "—"} editable />
                     <InfoField label="Phone Number" value={vendorInfo.phone || "—"} editable />
@@ -579,7 +599,9 @@ export default function PendingVendorDetailPage() {
                       label="Tax Identification Number (TIN)"
                       value={vendorInfo.tin}
                       buttonLabel="Verify TIN"
+                      verified={vendorInfo.tin_verified === true}
                       onVerify={() => verifyVendorTin({ vendor_id: params.id, tin: vendorInfo.tin })}
+                      onSuccess={fetchVendorInfo}
                     />
                     <InfoField label="Address" value={vendorInfo.address || "—"} />
                   </section>
@@ -593,7 +615,14 @@ export default function PendingVendorDetailPage() {
                     <InfoField label="Director's Name" value={directorsInfo?.director_name || "—"} />
                     <InfoField label="Phone Number" value={directorsInfo?.phone || "—"} />
                     <InfoField label="BVN" value={directorsInfo?.bvn || "—"} />
-                    <VerifiableField label="NIN" value={directorsInfo?.nin} buttonLabel="Verify NIN" />
+                    <VerifiableField
+                      label="NIN"
+                      value={directorsInfo?.nin}
+                      buttonLabel="Verify NIN"
+                      verified={directorsInfo?.nin_verified === true}
+                      onVerify={() => verifyVendorNin({ vendor_id: params.id, nin: directorsInfo?.nin })}
+                      onSuccess={fetchVendorInfo}
+                    />
                     <InfoField label="Political Affiliation" value={directorsInfo?.political_affiliation || "—"} />
                   </section>
                 </CardContent>

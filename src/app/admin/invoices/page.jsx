@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ChevronDown, MoreHorizontal, Search } from "lucide-react"
+import { ChevronDown, MoreHorizontal, Search, Loader2, Calendar } from "lucide-react"
 import { format } from "date-fns"
 import DateRangePicker from "../components/ui/DateRangePicker"
 import Pagination from "../components/Pagination/Pagination"
@@ -22,7 +22,8 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table"
-import { getAdminInvoicesList, deleteAdminInvoice, cancelAcceptedBid } from "../services/adminInvoices"
+import { getAdminInvoicesList, deleteAdminInvoice, cancelAcceptedBid, editInvoiceDueDate } from "../services/adminInvoices"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog"
 import { toast } from "react-toastify"
 import { SuccessToast, ErrorToast } from "../components/toast"
 
@@ -78,7 +79,7 @@ const TYPE_ACTIONS = {
   open_repayment: [{ label: "Edit Due Date",        className: "",               action: "edit_due" }],
 }
 
-function ActionMenu({ row, typeValue, onRefresh }) {
+function ActionMenu({ row, typeValue, onRefresh, onEditDueDate }) {
   const actions = TYPE_ACTIONS[typeValue] ?? []
   if (actions.length === 0) return null
 
@@ -107,8 +108,8 @@ function ActionMenu({ row, typeValue, onRefresh }) {
       } catch {
         toast(<ErrorToast message="Something went wrong. Please try again." />, { style: { padding: 0 } })
       }
-    } else {
-      console.log(action, row)
+    } else if (action === "edit_due") {
+      onEditDueDate?.(row)
     }
   }
 
@@ -145,6 +146,10 @@ export default function InvoicesPage() {
   const [typeFilter, setTypeFilter]   = useState(TYPE_OPTIONS[0])
   const [fromDate, setFromDate]       = useState("")
   const [toDate, setToDate]           = useState("")
+  const [editDueDateOpen, setEditDueDateOpen]   = useState(false)
+  const [editDueDateRow, setEditDueDateRow]     = useState(null)
+  const [newDueDate, setNewDueDate]             = useState("")
+  const [editDueDateSubmitting, setEditDueDateSubmitting] = useState(false)
 
   const fetchData = async ({ page = 1, searchVal = "", type = "all", from = "", to = "" }) => {
     const res = await getAdminInvoicesList({
@@ -202,6 +207,34 @@ export default function InvoicesPage() {
     setCurrentPage(1)
     fetchData({ page: 1, searchVal: search, type: typeFilter.value, from, to })
       .then(showErrorToast).catch(() => {})
+  }
+
+  const handleOpenEditDueDate = (row) => {
+    setEditDueDateRow(row)
+    // Pre-fill with existing due date formatted as yyyy-MM-dd for the input
+    const existing = row.due_date ? row.due_date.substring(0, 10) : ""
+    setNewDueDate(existing)
+    setEditDueDateOpen(true)
+  }
+
+  const handleEditDueDateSubmit = async () => {
+    if (!newDueDate || !editDueDateRow) return
+    setEditDueDateSubmitting(true)
+    try {
+      const res = await editInvoiceDueDate(editDueDateRow.invoice_no, newDueDate)
+      if (res?.res === "success") {
+        toast(<SuccessToast message={res?.messg} />, { style: { padding: 0 } })
+        setEditDueDateOpen(false)
+        fetchData({ page: currentPage, searchVal: search, type: typeFilter.value, from: fromDate, to: toDate })
+          .then(showErrorToast).catch(() => {})
+      } else {
+        toast(<ErrorToast message={res?.messg} />, { style: { padding: 0 } })
+      }
+    } catch {
+      toast(<ErrorToast message="Something went wrong. Please try again." />, { style: { padding: 0 } })
+    } finally {
+      setEditDueDateSubmitting(false)
+    }
   }
 
   if (loading) return <PageLoader />
@@ -314,7 +347,12 @@ export default function InvoicesPage() {
                     <td className="px-4 py-5 text-tableGrey whitespace-nowrap">{fmtNum(row.bid?.net_amount)}</td>
                     <td className="px-4 py-5 text-tableGrey whitespace-nowrap">{fmtNum(row.bid?.prorated_charges)}</td>
                     <td className="px-4 py-5">
-                      <ActionMenu row={row} typeValue={typeFilter.value} onRefresh={() => fetchData({ page: currentPage, searchVal: search, type: typeFilter.value, from: fromDate, to: toDate }).then(showErrorToast).catch(() => {})} />
+                      <ActionMenu
+                        row={row}
+                        typeValue={typeFilter.value}
+                        onRefresh={() => fetchData({ page: currentPage, searchVal: search, type: typeFilter.value, from: fromDate, to: toDate }).then(showErrorToast).catch(() => {})}
+                        onEditDueDate={handleOpenEditDueDate}
+                      />
                     </td>
                   </tr>
                 ))
@@ -327,6 +365,56 @@ export default function InvoicesPage() {
           <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
         </footer>
       </section>
+
+      {/* Edit Due Date Dialog */}
+      <Dialog open={editDueDateOpen} onOpenChange={setEditDueDateOpen}>
+        <DialogContent
+          className="p-6 gap-6 rounded-lg border border-[#E4E4E7] bg-white shadow-lg"
+          style={{ width: "652px", maxWidth: "652px" }}
+        >
+          <DialogHeader className="flex flex-row items-center justify-between p-0 space-y-0">
+            <DialogTitle style={{ fontSize: "18px", fontWeight: 700, lineHeight: "140%", color: "#09090B" }}>
+              Edit Due Date
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <p style={{ fontSize: "18px", fontWeight: 500, lineHeight: "140%", color: "#09090B" }}>
+              Select Due Date
+            </p>
+            <div className="relative flex items-center border border-[#E4E4E7] rounded-lg px-4 h-14 bg-white">
+              <input
+                type="date"
+                value={newDueDate}
+                onChange={(e) => setNewDueDate(e.target.value)}
+                className="flex-1 outline-none bg-transparent"
+                style={{ fontSize: "18px", fontWeight: 400, lineHeight: "140%", color: "#09090B" }}
+              />
+              <Calendar className="size-5 text-grey shrink-0 pointer-events-none" />
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              onClick={handleEditDueDateSubmit}
+              disabled={editDueDateSubmitting || !newDueDate}
+              className="flex items-center justify-center gap-2 rounded-lg disabled:opacity-60"
+              style={{
+                height: "44px",
+                padding: "8px 16px",
+                background: "#0098DB",
+                color: "#FAFAFA",
+                fontSize: "16px",
+                fontWeight: 500,
+                lineHeight: "140%",
+                minWidth: "100px",
+              }}
+            >
+              {editDueDateSubmitting ? <Loader2 className="size-4 animate-spin" /> : "Update"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }

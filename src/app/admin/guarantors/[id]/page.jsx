@@ -109,10 +109,9 @@ export default function GuarantorDetailPage() {
           </header>
 
           <section className="grid grid-cols-5 gap-6 border-t border-borderGrey pt-6">
-            <InfoField label="RC Number"     value={g.rc_number  ?? ""} />
-            <InfoField label="Email Address" value={g.email      ?? ""} editable />
-            <InfoField label="Industry"      value={g.industry   ?? ""} />
-            <InfoField label="Date Added"    value={fmtDate(g.date_added)} />
+            <InfoField label="RC Number"  value={g.rc_number ?? ""} />
+            <InfoField label="Industry"   value={g.industry  ?? ""} />
+            <InfoField label="Date Added" value={fmtDate(g.date_added)} />
           </section>
         </CardContent>
       </Card>

@@ -2,9 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import Button from '../admin/components/Button';
-import { useLogin } from '../admin/services/auth';import Storage from '../admin/utils/storageUtil';
+import { useLogin, getProfileFromToken } from '../admin/services/auth';
+import Storage from '../admin/utils/storageUtil';
 import { Input } from '../admin/components/ui/input';
 import { toast } from 'react-toastify';
+import { ErrorToast } from '../admin/components/toast';
 
  const LaginPage = ({handleClick}) => {
   const [credentials, setCredentials] = useState({
@@ -15,8 +17,15 @@ import { toast } from 'react-toastify';
   const [showPassword, setShowPassword] = useState(false)
 
   const {loginAsync, loginIsLoading, loginError} = useLogin(() => {
-    Storage.setObject("email", credentials?.email);
-    handleClick()
+    Storage.setObject("email", credentials?.email)
+    const profile = getProfileFromToken()
+    if (profile?.role === "ADMIN") {
+      handleClick()
+    } else {
+      Storage.remove("auth")
+      Storage.remove("email")
+      toast(<ErrorToast message="Access denied. Only admin accounts can log in here." />, { style: { padding: 0 } })
+    }
   })
 
   const login = async () => {

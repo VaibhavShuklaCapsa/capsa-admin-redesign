@@ -15,6 +15,13 @@ export const verifyVendorTin = async ({ vendor_id, tin }) => {
   return response.data  // { res, data, messg }
 }
 
+export const verifyVendorNin = async ({ vendor_id, nin }) => {
+  const apiRoute = routes.VerifyVendorNin()
+  const http = new HttpService()
+  const response = await http.postData({ user_id: Number(vendor_id), nin }, apiRoute)
+  return response.data  // { res, data: { verified, nin, verification_response }, messg }
+}
+
 export const verifyVendorBvn = async ({ vendor_id, bvn }) => {
   const apiRoute = routes.VerifyVendorBvn()
   const http = new HttpService()

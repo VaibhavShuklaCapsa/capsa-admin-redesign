@@ -255,7 +255,12 @@ export default function VendorDetailContent({
               <h4 className="text-base font-semibold text-customBlack">{companyDocumentsTitle}</h4>
               <section className="grid grid-cols-3 gap-4">
                 {vendor.companyDocuments?.map((doc) => (
-                  <DetailCard key={doc.title} title={doc.title} value={doc.file} />
+                  <DetailCard
+                    key={doc.title}
+                    title={doc.title}
+                    value={doc.file}
+                    handleClick={() => doc.url && window.open(doc.url, "_blank")}
+                  />
                 ))}
               </section>
             </CardContent>
@@ -279,7 +284,12 @@ export default function VendorDetailContent({
               <h4 className="text-base font-semibold text-customBlack">{directorDocumentsTitle}</h4>
               <section className="grid grid-cols-2 gap-4">
                 {vendor.directorDocuments?.map((doc) => (
-                  <DetailCard key={doc.title} title={doc.title} value={doc.file} />
+                  <DetailCard
+                    key={doc.title}
+                    title={doc.title}
+                    value={doc.file}
+                    handleClick={() => doc.url && window.open(doc.url, "_blank")}
+                  />
                 ))}
               </section>
             </CardContent>

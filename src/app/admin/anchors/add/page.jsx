@@ -97,7 +97,7 @@ const COVERAGE_OPTIONS = [
 // Step 1 required keys that map to API fields
 const STEP1_REQUIRED = [
   "bvn", "rcNumber", "companyName", "industry", "email", "contact",
-  "address", "city", "state", "founded", "keyPerson",
+  "registeredAddress", "city", "state", "founded", "keyPerson",
 ]
 
 export default function AddAnchorPage() {

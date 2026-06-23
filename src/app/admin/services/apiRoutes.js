@@ -129,10 +129,10 @@ export const routes = {
         return `/redesign/admin/add-guarantor`
     },
     GuarantorDetails: (id) => {
-        return `/dashboard/a/guarantorDetails/${id}`
+        return `/redesign/admin/guarantor-details`
     },
     AddGuarantor: () => {
-        return `/dashboard/a/addGuarantor`
+        return `/redesign/admin/add-guarantor`
     },
     TransactionVolumeList: () => {
         return `/redesign/admin/transaction-volume-list`
@@ -145,6 +145,9 @@ export const routes = {
     },
     AdminInvoiceCancelBid: () => {
         return `/redesign/admin/invoice-cancel-accepted-bid`
+    },
+    AdminInvoiceEditDueDate: () => {
+        return `/redesign/admin/invoice-edit-due-date`
     },
     AdminRFInvoiceList: () => {
         return `/redesign/admin/rf-invoice-list`
