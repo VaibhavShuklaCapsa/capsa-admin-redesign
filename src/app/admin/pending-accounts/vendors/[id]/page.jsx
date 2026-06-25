@@ -145,10 +145,28 @@ function RejectDocumentDialog({ open, onClose, onConfirm, busy }) {
 
 function KycDocViewerDialog({ doc, vendorId, open, onClose, onSuccess, onRejectClick }) {
   const [approving, setApproving] = useState(false)
+  const [blobUrl, setBlobUrl]     = useState(null)
+  const [blobLoading, setBlobLoading] = useState(false)
 
-  const fullUrl = doc?.doc_url ? `${FILE_BASE}/${doc.doc_url}` : null
-  const ext = (doc?.doc_url || "").split(".").pop().toLowerCase()
+  const fullUrl = doc?.url || null
+  const ext = (doc?.ext || "").toLowerCase()
   const isImage = ["png", "jpg", "jpeg", "gif", "webp"].includes(ext)
+
+  useEffect(() => {
+    if (!open || !fullUrl || isImage) { setBlobUrl(null); return }
+    let objectUrl = null
+    setBlobLoading(true)
+    fetch(fullUrl)
+      .then((r) => r.blob())
+      .then((blob) => {
+        const typed = new Blob([blob], { type: "application/pdf" })
+        objectUrl = URL.createObjectURL(typed)
+        setBlobUrl(objectUrl)
+      })
+      .catch(() => setBlobUrl(null))
+      .finally(() => setBlobLoading(false))
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl) }
+  }, [open, fullUrl, isImage])
 
   const handleApprove = async () => {
     setApproving(true)
@@ -171,6 +189,8 @@ function KycDocViewerDialog({ doc, vendorId, open, onClose, onSuccess, onRejectC
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
+        aria-describedby={undefined}
+        overlayClassName="bg-transparent"
         style={{
           width: "580px",
           maxWidth: "95vw",
@@ -208,13 +228,16 @@ function KycDocViewerDialog({ doc, vendorId, open, onClose, onSuccess, onRejectC
           {fullUrl ? (
             isImage ? (
               <img src={fullUrl} alt={doc?.label} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+            ) : blobLoading ? (
+              <div style={{ color: "#71717A", fontSize: "14px" }}>Loading document...</div>
+            ) : blobUrl ? (
+              <iframe
+                src={blobUrl}
+                title={doc?.label}
+                style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+              />
             ) : (
-              <object data={fullUrl} type="application/pdf" style={{ width: "100%", height: "100%", border: "none", display: "block" }}>
-                <p style={{ color: "#71717A", fontSize: "14px" }}>
-                  Cannot preview this file.{" "}
-                  <a href={fullUrl} target="_blank" rel="noreferrer" style={{ color: "#0098DB" }}>Open in new tab</a>
-                </p>
-              </object>
+              <div style={{ color: "#71717A", fontSize: "14px" }}>Unable to load document.</div>
             )
           ) : (
             <div style={{ color: "#71717A", fontSize: "14px" }}>No document available.</div>
@@ -347,19 +370,28 @@ function KycDocCard({ doc, vendorId, onRefetch }) {
     <>
       <div className="space-y-3">
         <h4 className="text-sm font-semibold text-customBlack">{doc.label}</h4>
-        {doc.doc_url ? (
+        {doc.url ? (
           <div className="flex items-center justify-between gap-4 bg-[#F4F4F5] py-3 px-4 rounded-xl w-[480px] max-w-full">
             <div className="flex items-center gap-3 min-w-0">
               <Image src="/icons/document-2.svg" width={20} height={20} alt="file" className="shrink-0" />
-              <span className="text-sm text-grey truncate">{doc.doc_url.split("/").pop()}</span>
+              <span className="text-sm text-grey truncate">{doc.filename?.split("/").pop() || doc.filename || "—"}</span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <button onClick={() => setViewerOpen(true)} className="text-[#16A34A] hover:opacity-80 transition-opacity">
-                <CheckCircle2 className="size-5" />
-              </button>
-              <button onClick={() => setViewerOpen(true)} className="text-[#EF4444] hover:opacity-80 transition-opacity">
-                <XCircle className="size-5" />
-              </button>
+              {doc.status === "2" && (
+                <>
+                  <button onClick={() => setViewerOpen(true)} className="text-[#16A34A] hover:opacity-80 transition-opacity">
+                    <CheckCircle2 className="size-5" />
+                  </button>
+                  <button onClick={() => setViewerOpen(true)} className="text-[#EF4444] hover:opacity-80 transition-opacity">
+                    <XCircle className="size-5" />
+                  </button>
+                </>
+              )}
+              {doc.status !== "2" && (
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${doc.status === "1" ? "bg-lightGreen text-[#16A34A]" : "bg-[#FEF3C7] text-[#D97706]"}`}>
+                  {doc.status_label || "—"}
+                </span>
+              )}
             </div>
           </div>
         ) : (
