@@ -155,8 +155,14 @@ export const routes = {
     AdminRRList: () => {
         return `/redesign/admin/rr-list`
     },
+    AdminRRReview: () => {
+        return `/redesign/admin/rr-review`
+    },
     AdminAssetList: () => {
         return `/redesign/admin/asset-list`
+    },
+    AdminAssetReview: () => {
+        return `/redesign/admin/asset-review`
     },
     AdminAnchorInvoices: () => {
         return `/dashboard/a/anchorInvoices`

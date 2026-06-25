@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ChevronDown, Search } from "lucide-react"
+import { ChevronDown, MoreHorizontal, Search } from "lucide-react"
 import { format } from "date-fns"
 import DateRangePicker from "../components/ui/DateRangePicker"
 import Pagination from "../components/Pagination/Pagination"
@@ -14,9 +14,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu"
-import { getAdminAssetList } from "../services/adminAssets"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog"
+import { getAdminAssetList, reviewAdminAsset } from "../services/adminAssets"
 import { toast } from "react-toastify"
-import { ErrorToast } from "../components/toast"
+import { ErrorToast, SuccessToast } from "../components/toast"
 
 const PAGE_SIZE = 10
 
@@ -56,6 +57,26 @@ function StatusBadge({ status }) {
   )
 }
 
+function ReviewField({ label, value, isNaira = false }) {
+  const hasValue = value !== null && value !== undefined && value !== ""
+  return (
+    <div className="flex flex-col gap-2 w-full">
+      <span style={{ fontFamily: "Satoshi", fontSize: "18px", fontWeight: 500, lineHeight: "140%", color: "#09090B" }}>{label}</span>
+      <div style={{ border: "1px solid #E4E4E7", borderRadius: "8px", padding: "14px 16px", background: "#fff" }}>
+        {isNaira ? (
+          <span style={{ fontFamily: "Satoshi", fontSize: "18px", fontWeight: 400, lineHeight: "140%", color: hasValue ? "#09090B" : "#71717A" }}>
+            {hasValue ? <>&#8358;&nbsp;&nbsp;{value}</> : "—"}
+          </span>
+        ) : (
+          <span style={{ fontFamily: "Satoshi", fontSize: "18px", fontWeight: 400, lineHeight: "140%", color: hasValue ? "#09090B" : "#71717A" }}>
+            {hasValue ? value : "—"}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function AssetsPage() {
   const [loading, setLoading]         = useState(true)
   const [assets, setAssets]           = useState([])
@@ -65,6 +86,9 @@ export default function AssetsPage() {
   const [typeFilter, setTypeFilter]   = useState(TYPE_OPTIONS[0])
   const [fromDate, setFromDate]       = useState("")
   const [toDate, setToDate]           = useState("")
+  const [reviewOpen, setReviewOpen]       = useState(false)
+  const [reviewRow, setReviewRow]         = useState(null)
+  const [reviewAction, setReviewAction]   = useState(null) // 'approve' | 'reject' | null
 
   const fetchData = async ({ page = 1, searchVal = "", type = "all", from = "", to = "" }) => {
     const res = await getAdminAssetList({ page_number: page, page_size: PAGE_SIZE, type, search: searchVal, from_date: from, to_date: to })
@@ -89,6 +113,25 @@ export default function AssetsPage() {
   const handlePageChange = (page) => { setCurrentPage(page); fetchData({ page, searchVal: search, type: typeFilter.value, from: fromDate, to: toDate }).then(showErrorToast).catch(() => {}) }
   const handleSearch = (val) => { setSearch(val); setCurrentPage(1); fetchData({ page: 1, searchVal: val, type: typeFilter.value, from: fromDate, to: toDate }).then(showErrorToast).catch(() => {}) }
   const handleTypeChange = (opt) => { setTypeFilter(opt); setCurrentPage(1); fetchData({ page: 1, searchVal: search, type: opt.value, from: fromDate, to: toDate }).then(showErrorToast).catch(() => {}) }
+
+  const handleAssetReview = async (action) => {
+    if (reviewAction) return
+    setReviewAction(action)
+    try {
+      const res = await reviewAdminAsset({ asset_id: reviewRow?.asset_id, action })
+      if (res?.res === "success") {
+        toast(<SuccessToast message={res?.messg || (action === "approve" ? "Asset approved." : "Asset rejected.")} />, { style: { padding: 0 } })
+        setReviewOpen(false)
+        fetchData({ page: currentPage, searchVal: search, type: typeFilter.value, from: fromDate, to: toDate }).then(showErrorToast).catch(() => {})
+      } else {
+        toast(<ErrorToast message={res?.messg || "Something went wrong."} />, { style: { padding: 0 } })
+      }
+    } catch {
+      toast(<ErrorToast message="Something went wrong." />, { style: { padding: 0 } })
+    } finally {
+      setReviewAction(null)
+    }
+  }
   const handleDateChange = (range) => {
     if (!range?.from || !range?.to) return
     const from = format(range.from, "yyyy-MM-dd")
@@ -152,11 +195,12 @@ export default function AssetsPage() {
                 <th className="px-4 py-5 text-left font-bold text-grey whitespace-nowrap">Total Fee (₦)</th>
                 <th className="px-4 py-5 text-left font-bold text-grey whitespace-nowrap">Net Amount (₦)</th>
                 <th className="px-4 py-5 text-left font-bold text-grey whitespace-nowrap">Prorated Charges (₦)</th>
+                <th className="px-4 py-5 text-left font-bold text-grey whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-borderGrey">
               {assets.length === 0 ? (
-                <tr><td colSpan={16} className="text-center py-16 text-grey text-sm">No assets found.</td></tr>
+                <tr><td colSpan={17} className="text-center py-16 text-grey text-sm">No assets found.</td></tr>
               ) : (
                 assets.map((row, i) => (
                   <tr key={`${row.asset_id}-${i}`}>
@@ -176,6 +220,22 @@ export default function AssetsPage() {
                     <td className="px-4 py-5 text-tableGrey whitespace-nowrap">{fmtNum(row.total_fee)}</td>
                     <td className="px-4 py-5 text-tableGrey whitespace-nowrap">{fmtNum(row.net_amount)}</td>
                     <td className="px-4 py-5 text-tableGrey whitespace-nowrap">{fmtNum(row.prorated_charges)}</td>
+                    <td className="px-4 py-5 whitespace-nowrap">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="cursor-pointer">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="min-w-48">
+                          <DropdownMenuItem className="font-semibold text-customBlack p-4 cursor-default">Actions</DropdownMenuItem>
+                          <hr />
+                          <DropdownMenuItem className="p-4 text-sm cursor-pointer" onSelect={() => { setReviewRow(row); setReviewOpen(true) }}>
+                            Review Asset
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
                   </tr>
                 ))
               )}
@@ -187,6 +247,61 @@ export default function AssetsPage() {
           <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
         </footer>
       </section>
+      {/* Review Asset Dialog */}
+      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+        <DialogContent
+          style={{ width: "652px", maxWidth: "652px", padding: "24px", gap: "24px", borderRadius: "8px", border: "1px solid #E4E4E7", background: "#fff", boxShadow: "0 4px 6px -4px rgba(16,24,40,0.10), 0 10px 15px -3px rgba(0,0,0,0.10)" }}
+          className="flex flex-col items-start"
+        >
+          <DialogHeader className="flex flex-row items-center justify-between w-full p-0 space-y-0 border-b border-[#E4E4E7] pb-4">
+            <DialogTitle style={{ fontFamily: "Satoshi", fontSize: "18px", fontWeight: 700, lineHeight: "140%", color: "#09090B" }}>
+              Review Asset
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Two info boxes */}
+          <div className="flex gap-4 w-full">
+            <div style={{ width: "290px", padding: "12px", borderRadius: "8px", border: "1px solid #E9EAEB", background: "#FAFAFA", display: "flex", flexDirection: "column", gap: "8px" }}>
+              <span style={{ fontFamily: "Satoshi", fontSize: "12px", fontWeight: 500, lineHeight: "140%", color: "#71717A" }}>Investor</span>
+              <span style={{ fontFamily: "'Plus Jakarta Sans'", fontSize: "16px", fontWeight: 700, lineHeight: "110%", letterSpacing: "-0.32px", color: "#0098DB" }}>{reviewRow?.investor_name ?? "—"}</span>
+            </div>
+            <div style={{ width: "290px", padding: "12px", borderRadius: "8px", border: "1px solid #E9EAEB", background: "#FAFAFA", display: "flex", flexDirection: "column", gap: "8px" }}>
+              <span style={{ fontFamily: "Satoshi", fontSize: "12px", fontWeight: 500, lineHeight: "140%", color: "#71717A" }}>Series Details</span>
+              <span style={{ fontFamily: "'Plus Jakarta Sans'", fontSize: "16px", fontWeight: 700, lineHeight: "110%", letterSpacing: "-0.32px", color: "#0098DB" }}>{reviewRow?.series_details ?? "—"}</span>
+            </div>
+          </div>
+
+          {/* Fields */}
+          <div className="flex flex-col gap-4 w-full">
+            <ReviewField label="Issue Date" value={fmtDate(reviewRow?.issued_date)} />
+            <ReviewField label="Tenor (Days)" value={reviewRow?.tenor ?? ""} />
+            <ReviewField label="Maturity Date" value={fmtDate(reviewRow?.maturity_date)} />
+            <ReviewField label="Total Value" value={fmtNum(reviewRow?.total_value)} isNaira />
+          </div>
+
+          {/* Buttons */}
+          <div className="flex items-center justify-end gap-3 w-full pt-2">
+            <button
+              onClick={() => handleAssetReview("reject")}
+              disabled={!!reviewAction}
+              style={{ width: "120px", height: "44px", padding: "8px 16px", borderRadius: "8px", background: "#DC2626", border: "none", cursor: reviewAction ? "not-allowed" : "pointer", opacity: reviewAction ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              <span style={{ fontFamily: "Satoshi", fontSize: "16px", fontWeight: 500, lineHeight: "140%", color: "#FAFAFA" }}>
+                {reviewAction === "reject" ? "Rejecting..." : "Reject"}
+              </span>
+            </button>
+            <button
+              onClick={() => handleAssetReview("approve")}
+              disabled={!!reviewAction}
+              style={{ width: "120px", height: "44px", padding: "8px 16px", borderRadius: "8px", background: "#0098DB", border: "none", cursor: reviewAction ? "not-allowed" : "pointer", opacity: reviewAction ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              <span style={{ fontFamily: "Satoshi", fontSize: "16px", fontWeight: 500, lineHeight: "140%", color: "#FAFAFA" }}>
+                {reviewAction === "approve" ? "Approving..." : "Approve"}
+              </span>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }

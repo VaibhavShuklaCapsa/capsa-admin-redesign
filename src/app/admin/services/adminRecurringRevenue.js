@@ -10,3 +10,17 @@ export const getAdminRRList = async ({ page_number = 1, page_size = 10, type = "
   const response = await http.postData({ page_number, page_size, type, search, from_date, to_date }, apiRoute)
   return response.data  // { res, data: { rr_list, pagination, filters }, messg }
 }
+
+export const reviewAdminRR = async ({ deal_id, action, reason }) => {
+  const apiRoute = routes.AdminRRReview()
+  const http = new HttpService()
+  const payload = { deal_id, action }
+  if (reason) payload.reason = reason
+  try {
+    const response = await http.postData(payload, apiRoute)
+    return response.data  // { res, data, messg }
+  } catch (err) {
+    if (err?.response?.data) return err.response.data
+    throw err
+  }
+}

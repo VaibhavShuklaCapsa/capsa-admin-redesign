@@ -14,9 +14,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu"
-import { getAdminRRList } from "../services/adminRecurringRevenue"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog"
+import { getAdminRRList, reviewAdminRR } from "../services/adminRecurringRevenue"
 import { toast } from "react-toastify"
-import { ErrorToast } from "../components/toast"
+import { ErrorToast, SuccessToast } from "../components/toast"
 
 const PAGE_SIZE = 10
 
@@ -58,6 +59,26 @@ function StatusBadge({ status }) {
   )
 }
 
+function ReviewField({ label, value, isNaira = false }) {
+  const hasValue = value !== null && value !== undefined && value !== ""
+  return (
+    <div className="flex flex-col gap-2 w-full">
+      <span style={{ fontFamily: "Satoshi", fontSize: "18px", fontWeight: 500, lineHeight: "140%", color: "#09090B" }}>{label}</span>
+      <div style={{ border: "1px solid #E4E4E7", borderRadius: "8px", padding: "14px 16px", background: "#fff" }}>
+        {isNaira ? (
+          <span style={{ fontFamily: "Satoshi", fontSize: "18px", fontWeight: 400, lineHeight: "140%", color: hasValue ? "#09090B" : "#71717A" }}>
+            {hasValue ? <>&#8358;&nbsp;&nbsp;{value}</> : "—"}
+          </span>
+        ) : (
+          <span style={{ fontFamily: "Satoshi", fontSize: "18px", fontWeight: 400, lineHeight: "140%", color: hasValue ? "#09090B" : "#71717A" }}>
+            {hasValue ? value : "—"}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function RecurringRevenuePage() {
   const [loading, setLoading]         = useState(true)
   const [rrList, setRRList]           = useState([])
@@ -67,6 +88,9 @@ export default function RecurringRevenuePage() {
   const [typeFilter, setTypeFilter]   = useState(TYPE_OPTIONS[0])
   const [fromDate, setFromDate]       = useState("")
   const [toDate, setToDate]           = useState("")
+  const [reviewOpen, setReviewOpen]     = useState(false)
+  const [reviewRow, setReviewRow]       = useState(null)
+  const [reviewAction, setReviewAction] = useState(null) // 'approve' | 'reject' | null
 
   const fetchData = async ({ page = 1, searchVal = "", type = "all", from = "", to = "" }) => {
     const res = await getAdminRRList({ page_number: page, page_size: PAGE_SIZE, type, search: searchVal, from_date: from, to_date: to })
@@ -91,6 +115,25 @@ export default function RecurringRevenuePage() {
   const handlePageChange = (page) => { setCurrentPage(page); fetchData({ page, searchVal: search, type: typeFilter.value, from: fromDate, to: toDate }).then(showErrorToast).catch(() => {}) }
   const handleSearch = (val) => { setSearch(val); setCurrentPage(1); fetchData({ page: 1, searchVal: val, type: typeFilter.value, from: fromDate, to: toDate }).then(showErrorToast).catch(() => {}) }
   const handleTypeChange = (opt) => { setTypeFilter(opt); setCurrentPage(1); fetchData({ page: 1, searchVal: search, type: opt.value, from: fromDate, to: toDate }).then(showErrorToast).catch(() => {}) }
+
+  const handleRRReview = async (action) => {
+    if (reviewAction) return
+    setReviewAction(action)
+    try {
+      const res = await reviewAdminRR({ deal_id: reviewRow?.deal_id, action })
+      if (res?.res === "success") {
+        toast(<SuccessToast message={res?.messg || (action === "approve" ? "Revenue approved." : "Revenue rejected.")} />, { style: { padding: 0 } })
+        setReviewOpen(false)
+        fetchData({ page: currentPage, searchVal: search, type: typeFilter.value, from: fromDate, to: toDate }).then(showErrorToast).catch(() => {})
+      } else {
+        toast(<ErrorToast message={res?.messg || "Something went wrong."} />, { style: { padding: 0 } })
+      }
+    } catch {
+      toast(<ErrorToast message="Something went wrong." />, { style: { padding: 0 } })
+    } finally {
+      setReviewAction(null)
+    }
+  }
   const handleDateChange = (range) => {
     if (!range?.from || !range?.to) return
     const from = format(range.from, "yyyy-MM-dd")
@@ -162,11 +205,12 @@ export default function RecurringRevenuePage() {
                 <th className="px-4 py-5 text-left font-bold text-grey whitespace-nowrap">Total Fees (₦)</th>
                 <th className="px-4 py-5 text-left font-bold text-grey whitespace-nowrap">Net Amount (₦)</th>
                 <th className="px-4 py-5 text-left font-bold text-grey whitespace-nowrap">Prorated Charges (₦)</th>
+                <th className="px-4 py-5 text-left font-bold text-grey whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-borderGrey">
               {rows.length === 0 ? (
-                <tr><td colSpan={17} className="text-center py-16 text-grey text-sm">No recurring revenue found.</td></tr>
+                <tr><td colSpan={18} className="text-center py-16 text-grey text-sm">No recurring revenue found.</td></tr>
               ) : (
                 rows.map((row, i) => (
                   <tr key={`${row.deal_id}-${i}`}>
@@ -187,6 +231,22 @@ export default function RecurringRevenuePage() {
                     <td className="px-4 py-5 text-tableGrey whitespace-nowrap">{fmtNum(row.bid?.total_fees)}</td>
                     <td className="px-4 py-5 text-tableGrey whitespace-nowrap">{fmtNum(row.bid?.net_amount)}</td>
                     <td className="px-4 py-5 text-tableGrey whitespace-nowrap">{fmtNum(row.bid?.prorated_charges)}</td>
+                    <td className="px-4 py-5 whitespace-nowrap">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="cursor-pointer">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="min-w-48">
+                          <DropdownMenuItem className="font-semibold text-customBlack p-4 cursor-default">Actions</DropdownMenuItem>
+                          <hr />
+                          <DropdownMenuItem className="p-4 text-sm cursor-pointer" onSelect={() => { setReviewRow(row); setReviewOpen(true) }}>
+                            Review RR
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
                   </tr>
                 ))
               )}
@@ -198,6 +258,61 @@ export default function RecurringRevenuePage() {
           <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
         </footer>
       </section>
+      {/* Review Revenue Dialog */}
+      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+        <DialogContent
+          style={{ width: "652px", maxWidth: "652px", padding: "24px", gap: "24px", borderRadius: "8px", border: "1px solid #E4E4E7", background: "#fff", boxShadow: "0 4px 6px -4px rgba(16,24,40,0.10), 0 10px 15px -3px rgba(0,0,0,0.10)" }}
+          className="flex flex-col items-start"
+        >
+          <DialogHeader className="flex flex-row items-center justify-between w-full p-0 space-y-0 border-b border-[#E4E4E7] pb-4">
+            <DialogTitle style={{ fontFamily: "Satoshi", fontSize: "18px", fontWeight: 700, lineHeight: "140%", color: "#09090B" }}>
+              Review Revenue
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Two info boxes */}
+          <div className="flex gap-4 w-full">
+            <div style={{ width: "290px", padding: "12px", borderRadius: "8px", border: "1px solid #E9EAEB", background: "#FAFAFA", display: "flex", flexDirection: "column", gap: "8px" }}>
+              <span style={{ fontFamily: "Satoshi", fontSize: "12px", fontWeight: 500, lineHeight: "140%", color: "#71717A" }}>Vendor</span>
+              <span style={{ fontFamily: "'Plus Jakarta Sans'", fontSize: "16px", fontWeight: 700, lineHeight: "110%", letterSpacing: "-0.32px", color: "#0098DB" }}>{reviewRow?.vendor_name ?? "—"}</span>
+            </div>
+            <div style={{ width: "290px", padding: "12px", borderRadius: "8px", border: "1px solid #E9EAEB", background: "#FAFAFA", display: "flex", flexDirection: "column", gap: "8px" }}>
+              <span style={{ fontFamily: "Satoshi", fontSize: "12px", fontWeight: 500, lineHeight: "140%", color: "#71717A" }}>Revenue Number</span>
+              <span style={{ fontFamily: "'Plus Jakarta Sans'", fontSize: "16px", fontWeight: 700, lineHeight: "110%", letterSpacing: "-0.32px", color: "#0098DB" }}>{reviewRow?.revenue_no ?? "—"}</span>
+            </div>
+          </div>
+
+          {/* Fields */}
+          <div className="flex flex-col gap-4 w-full">
+            <ReviewField label="Issue Date" value={fmtDate(reviewRow?.revenue_date)} />
+            <ReviewField label="Tenor (Days)" value={reviewRow?.tenor ?? reviewRow?.interval ?? ""} />
+            <ReviewField label="Due Date" value={fmtDate(reviewRow?.due_date)} />
+            <ReviewField label="Revenue Amount" value={fmtNum(reviewRow?.revenue_amount)} isNaira />
+          </div>
+
+          {/* Buttons */}
+          <div className="flex items-center justify-end gap-3 w-full pt-2">
+            <button
+              onClick={() => handleRRReview("reject")}
+              disabled={!!reviewAction}
+              style={{ width: "120px", height: "44px", padding: "8px 16px", borderRadius: "8px", background: "#DC2626", border: "none", cursor: reviewAction ? "not-allowed" : "pointer", opacity: reviewAction ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              <span style={{ fontFamily: "Satoshi", fontSize: "16px", fontWeight: 500, lineHeight: "140%", color: "#FAFAFA" }}>
+                {reviewAction === "reject" ? "Rejecting..." : "Reject"}
+              </span>
+            </button>
+            <button
+              onClick={() => handleRRReview("approve")}
+              disabled={!!reviewAction}
+              style={{ width: "120px", height: "44px", padding: "8px 16px", borderRadius: "8px", background: "#0098DB", border: "none", cursor: reviewAction ? "not-allowed" : "pointer", opacity: reviewAction ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              <span style={{ fontFamily: "Satoshi", fontSize: "16px", fontWeight: 500, lineHeight: "140%", color: "#FAFAFA" }}>
+                {reviewAction === "approve" ? "Approving..." : "Approve"}
+              </span>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }
