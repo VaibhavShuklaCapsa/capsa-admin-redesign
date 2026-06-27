@@ -25,7 +25,7 @@ export const verifyVendorNin = async ({ vendor_id, nin }) => {
 export const verifyVendorBvn = async ({ vendor_id, bvn }) => {
   const apiRoute = routes.VerifyVendorBvn()
   const http = new HttpService()
-  const response = await http.postData({ vendor_id, bvn }, apiRoute)
+  const response = await http.postData({ user_id: vendor_id, bvn }, apiRoute)
   return response.data  // { res, data, messg }
 }
 

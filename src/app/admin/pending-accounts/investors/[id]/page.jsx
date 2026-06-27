@@ -414,6 +414,7 @@ export default function PendingInvestorDetailPage() {
   const [accountLoading, setAccountLoading]   = useState(false)
   const [accountError, setAccountError]       = useState(false)
   const [accountData, setAccountData]         = useState(null)
+  const [accVerification, setAccVerification] = useState(null)
   const [creatingAccount, setCreatingAccount] = useState(false)
 
   const fetchInvestorInfo = () => {
@@ -436,7 +437,10 @@ export default function PendingInvestorDetailPage() {
   const fetchAccountData = () => {
     setAccountLoading(true); setAccountError(false)
     getInvestorBankAccount(params.id)
-      .then((res) => setAccountData(res?.data ?? null))
+      .then((res) => {
+        setAccountData(res?.data ?? null)
+        setAccVerification(res?.data?.verification ?? null)
+      })
       .catch(() => setAccountError(true))
       .finally(() => setAccountLoading(false))
   }
@@ -663,7 +667,7 @@ export default function PendingInvestorDetailPage() {
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-base font-semibold text-customBlack">Bank Account Details</h4>
-                  {accountData?.status === "Not Created" && (
+                  {accountData?.status === "Not Created" && accVerification && Object.values(accVerification).every((v) => v === true) && (
                     <button
                       onClick={handleCreateAccount}
                       disabled={creatingAccount}
@@ -673,15 +677,13 @@ export default function PendingInvestorDetailPage() {
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-5 gap-4 border-t border-borderGrey pt-4">
-                  <p className="text-sm text-grey">Investor PAN</p>
+                <div className="grid grid-cols-4 gap-4 border-t border-borderGrey pt-4">
                   <p className="text-sm text-grey">Bank Name</p>
                   <p className="text-sm text-grey">Account Number</p>
                   <p className="text-sm text-grey">Account Name</p>
                   <p className="text-sm text-grey">Status</p>
                 </div>
-                <div className="grid grid-cols-5 gap-4 border-t border-borderGrey pt-4">
-                  <p className="text-sm font-semibold text-customBlack">{accountData?.investor_pan || "—"}</p>
+                <div className="grid grid-cols-4 gap-4 pt-2">
                   <p className="text-sm text-customBlack">{accountData?.bank_name || "—"}</p>
                   <p className="text-sm text-customBlack">{accountData?.account_number || "—"}</p>
                   <p className="text-sm text-customBlack">{accountData?.account_name || "—"}</p>

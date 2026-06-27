@@ -503,6 +503,7 @@ export default function PendingVendorDetailPage() {
   const [kycError, setKycError]           = useState(false)
 
   const [accounts, setAccounts]           = useState([])
+  const [verification, setVerification]   = useState(null)
   const [accLoading, setAccLoading]       = useState(false)
   const [accError, setAccError]           = useState(false)
   const [creatingAccount, setCreatingAccount] = useState(false)
@@ -532,7 +533,10 @@ export default function PendingVendorDetailPage() {
   const refreshAccountLetters = () => {
     setAccLoading(true); setAccError(false)
     return getVendorAccountLetters(params.id)
-      .then((res) => setAccounts(res?.data?.accounts ?? []))
+      .then((res) => {
+        setAccounts(res?.data?.accounts ?? [])
+        setVerification(res?.data?.verification ?? null)
+      })
       .catch(() => setAccError(true))
       .finally(() => setAccLoading(false))
   }
@@ -746,87 +750,73 @@ export default function PendingVendorDetailPage() {
             <Card className="border border-borderGrey rounded-2xl shadow-sm py-0">
               <CardContent className="p-6 text-center py-16 text-grey text-sm">Unable to load account information. Please try again.</CardContent>
             </Card>
-          ) : accounts.length === 0 ? (
-            <Card className="border border-borderGrey rounded-2xl shadow-sm py-0">
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                  <h4 className="text-base font-semibold text-customBlack">Bank Account Details</h4>
-                  <button
-                    onClick={handleCreateAccount}
-                    disabled={creatingAccount}
-                    className="text-sm font-medium text-blue hover:opacity-80 transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {creatingAccount ? "Creating..." : "Create Account"} →
-                  </button>
-                </div>
+          ) : (() => {
+            const allVerified = verification
+              ? verification.bvn_verified && verification.nin_verified && verification.tin_verified && verification.docs_verified
+              : true
+            const isNotCreated = accounts.length === 0 || accounts.some((a) => a.status === "Not Created")
 
-                <div className="grid grid-cols-4 gap-4 border-t border-borderGrey pt-4">
-                  <p className="text-sm text-grey">Bank Name</p>
-                  <p className="text-sm text-grey">Account Number</p>
-                  <p className="text-sm text-grey">Account Name</p>
-                  <p className="text-sm text-grey">Status</p>
-                </div>
-
-                <div className="grid grid-cols-4 gap-4">
-                  <p className="text-sm font-semibold text-customBlack">—</p>
-                  <p className="text-sm font-semibold text-customBlack">—</p>
-                  <p className="text-sm font-semibold text-customBlack">—</p>
-                  <StatusBadge status="Not Created" />
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              {/* Bank Account Details table */}
-              <Card className="border border-borderGrey rounded-2xl shadow-sm py-0">
-                <CardContent className="p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-base font-semibold text-customBlack">Bank Account Details</h4>
-                    <button
-                      onClick={() => accounts[0]?.account_letter?.doc_url && window.open(`${FILE_BASE}/${accounts[0].account_letter.doc_url}`, "_blank")}
-                      className="text-sm font-medium text-blue hover:opacity-80 transition-opacity flex items-center gap-1"
-                    >
-                      Download →
-                    </button>
-                  </div>
-
-                  {/* Column headers */}
-                  <div className="grid grid-cols-5 gap-4 border-t border-borderGrey pt-4">
-                    <p className="text-sm text-grey">Anchor Name</p>
-                    <p className="text-sm text-grey">Bank Name</p>
-                    <p className="text-sm text-grey">Account Number</p>
-                    <p className="text-sm text-grey">Account Name</p>
-                    <p className="text-sm text-grey">Status</p>
-                  </div>
-
-                  {/* Data rows */}
-                  {accounts.map((acc) => (
-                    <div key={acc.id} className="grid grid-cols-5 gap-4 border-t border-borderGrey pt-4">
-                      <p className="text-sm font-semibold text-customBlack">{acc.anchor_name || "—"}</p>
-                      <p className="text-sm text-customBlack">{acc.bank_name || "—"}</p>
-                      <p className="text-sm text-customBlack">{acc.account_number || "—"}</p>
-                      <p className="text-sm text-customBlack">{acc.account_name || "—"}</p>
-                      <StatusBadge status={acc.status} />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Account Letter cards — one per account that has an uploaded letter */}
-              {accounts.filter((acc) => acc.account_letter?.uploaded === "1").map((acc) => (
-                <Card key={`letter-${acc.id}`} className="border border-borderGrey rounded-2xl shadow-sm py-0">
+            return (
+              <>
+                <Card className="border border-borderGrey rounded-2xl shadow-sm py-0">
                   <CardContent className="p-6 space-y-4">
-                    <h4 className="text-base font-semibold text-customBlack">
-                      Account Letter for {acc.anchor_name}
-                    </h4>
-                    <AccountLetterCard acc={acc} vendorId={params.id} onRefetch={() => {
-                      refreshAccountLetters()
-                    }} />
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-base font-semibold text-customBlack">Bank Account Details</h4>
+                      {allVerified && isNotCreated && (
+                        <button
+                          onClick={handleCreateAccount}
+                          disabled={creatingAccount}
+                          className="text-sm font-medium text-blue hover:opacity-80 transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {creatingAccount ? "Creating..." : "Create Account →"}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-5 gap-4 border-t border-borderGrey pt-4">
+                      <p className="text-sm text-grey">Anchor Name</p>
+                      <p className="text-sm text-grey">Bank Name</p>
+                      <p className="text-sm text-grey">Account Number</p>
+                      <p className="text-sm text-grey">Account Name</p>
+                      <p className="text-sm text-grey">Status</p>
+                    </div>
+
+                    {accounts.length === 0 ? (
+                      <div className="grid grid-cols-5 gap-4 pt-2">
+                        <p className="text-sm font-semibold text-customBlack">—</p>
+                        <p className="text-sm text-customBlack">—</p>
+                        <p className="text-sm text-customBlack">—</p>
+                        <p className="text-sm text-customBlack">—</p>
+                        <StatusBadge status="Not Created" />
+                      </div>
+                    ) : (
+                      accounts.map((acc) => (
+                        <div key={acc.anchor_pan} className="grid grid-cols-5 gap-4 pt-2">
+                          <p className="text-sm font-semibold text-customBlack">{acc.anchor_name || "—"}</p>
+                          <p className="text-sm text-customBlack">{acc.bank_name || "—"}</p>
+                          <p className="text-sm text-customBlack">{acc.account_number || "—"}</p>
+                          <p className="text-sm text-customBlack">{acc.account_name || "—"}</p>
+                          <StatusBadge status={acc.status} />
+                        </div>
+                      ))
+                    )}
                   </CardContent>
                 </Card>
-              ))}
-            </>
-          )}
+
+                {/* Account Letter cards — only when not "Not Created" and letter is uploaded */}
+                {!isNotCreated && accounts.filter((acc) => acc.account_letter?.uploaded === "1").map((acc) => (
+                  <Card key={`letter-${acc.anchor_pan}`} className="border border-borderGrey rounded-2xl shadow-sm py-0">
+                    <CardContent className="p-6 space-y-4">
+                      <h4 className="text-base font-semibold text-customBlack">
+                        Account Letter for {acc.anchor_name}
+                      </h4>
+                      <AccountLetterCard acc={acc} vendorId={params.id} onRefetch={refreshAccountLetters} />
+                    </CardContent>
+                  </Card>
+                ))}
+              </>
+            )
+          })()}
         </TabsContent>
       </Tabs>
     </section>

@@ -279,7 +279,7 @@ function SettlementConfirmModal({ open, onClose, row, settleConfig, onConfirm, o
               cursor: "pointer",
             }}
           >
-            Yes, Settle
+            {submitting ? "Processing..." : "Yes, Settle"}
           </button>
         </div>
       </DialogContent>
