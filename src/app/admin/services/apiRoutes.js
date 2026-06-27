@@ -632,6 +632,12 @@ export const routes = {
     VendorAccountLetters: () => {
         return `/redesign/admin/vendor-account-letters`
     },
+    VendorAccountLetterAction: () => {
+        return `/redesign/admin/vendor-account-letter-action`
+    },
+    CreateVendorAccount: () => {
+        return `/redesign/admin/create-account`
+    },
     PendingInvestors: () => {
         return `/redesign/admin/investor-pending-list`
     },
@@ -643,6 +649,12 @@ export const routes = {
     },
     InvestorKycDocAction: () => {
         return `/redesign/admin/investor-kyc-doc-action`
+    },
+    InvestorBankAccount: () => {
+        return `/redesign/admin/investor-bank-account`
+    },
+    CreateInvestorAccount: () => {
+        return `/redesign/admin/create-investor-account`
     },
     PendingGrowthPartners: () => {
         return `/redesign/admin/gp-pending-list`

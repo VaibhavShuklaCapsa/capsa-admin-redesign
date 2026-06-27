@@ -18,7 +18,7 @@ import {
 import StatusBadge from "../../../components/ui/StatusBadge"
 import InfoField from "../../../components/ui/InfoField"
 import PageLoader from "../../../components/ui/PageLoader"
-import { getPendingVendorDetail, getVendorKycDocuments, verifyVendorBvn, verifyVendorTin, verifyVendorNin, vendorKycDocAction, getVendorAccountLetters } from "../../../services/pendingVendorDetail"
+import { getPendingVendorDetail, getVendorKycDocuments, verifyVendorBvn, verifyVendorTin, verifyVendorNin, vendorKycDocAction, vendorAccountLetterAction, getVendorAccountLetters, createVendorAccount } from "../../../services/pendingVendorDetail"
 import { toast } from "react-toastify"
 import { ErrorToast, SuccessToast } from "../../../components/toast"
 
@@ -143,7 +143,7 @@ function RejectDocumentDialog({ open, onClose, onConfirm, busy }) {
   )
 }
 
-function KycDocViewerDialog({ doc, vendorId, open, onClose, onSuccess, onRejectClick }) {
+function KycDocViewerDialog({ doc, vendorId, open, onClose, onSuccess, onRejectClick, onApprove }) {
   const [approving, setApproving] = useState(false)
   const [blobUrl, setBlobUrl]     = useState(null)
   const [blobLoading, setBlobLoading] = useState(false)
@@ -151,9 +151,10 @@ function KycDocViewerDialog({ doc, vendorId, open, onClose, onSuccess, onRejectC
   const fullUrl = doc?.url || null
   const ext = (doc?.ext || "").toLowerCase()
   const isImage = ["png", "jpg", "jpeg", "gif", "webp"].includes(ext)
+  const isDocx  = ["docx", "doc"].includes(ext)
 
   useEffect(() => {
-    if (!open || !fullUrl || isImage) { setBlobUrl(null); return }
+    if (!open || !fullUrl || isImage || isDocx) { setBlobUrl(null); return }
     let objectUrl = null
     setBlobLoading(true)
     fetch(fullUrl)
@@ -171,7 +172,9 @@ function KycDocViewerDialog({ doc, vendorId, open, onClose, onSuccess, onRejectC
   const handleApprove = async () => {
     setApproving(true)
     try {
-      const res = await vendorKycDocAction({ user_id: Number(vendorId), field_name: doc.field_name, action: "approve" })
+      const res = onApprove
+        ? await onApprove()
+        : await vendorKycDocAction({ user_id: Number(vendorId), field_name: doc.field_name, action: "approve" })
       if (res?.res === "success") {
         toast(<SuccessToast message={res?.messg || "Document approved."} />, { style: { padding: 0 } })
         onSuccess()
@@ -228,6 +231,12 @@ function KycDocViewerDialog({ doc, vendorId, open, onClose, onSuccess, onRejectC
           {fullUrl ? (
             isImage ? (
               <img src={fullUrl} alt={doc?.label} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+            ) : isDocx ? (
+              <iframe
+                src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fullUrl)}`}
+                title={doc?.label}
+                style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+              />
             ) : blobLoading ? (
               <div style={{ color: "#71717A", fontSize: "14px" }}>Loading document...</div>
             ) : blobUrl ? (
@@ -283,14 +292,15 @@ function AccountLetterCard({ acc, vendorId, onRefetch }) {
 
   const doc = {
     label:      `Account Letter for ${acc.anchor_name}`,
-    doc_url:    acc.account_letter.doc_url,
+    url:        acc.account_letter.signed_url,
+    ext:        acc.account_letter.ext,
     field_name: "account_letter",
   }
 
   const handleReject = async (reason) => {
     setRejecting(true)
     try {
-      const res = await vendorKycDocAction({ user_id: Number(vendorId), field_name: "account_letter", action: "reject", reason })
+      const res = await vendorAccountLetterAction({ user_id: Number(vendorId), anchor_pan: acc.anchor_pan, action: "reject", reason })
       if (res?.res === "success") {
         toast(<SuccessToast message={res?.messg || "Document rejected."} />, { style: { padding: 0 } })
         onRefetch()
@@ -305,6 +315,9 @@ function AccountLetterCard({ acc, vendorId, onRefetch }) {
     }
   }
 
+  const handleApprove = () =>
+    vendorAccountLetterAction({ user_id: Number(vendorId), anchor_pan: acc.anchor_pan, action: "approve" })
+
   return (
     <>
       <div className="flex items-center gap-4 bg-[#F4F4F5] py-3 px-4 rounded-xl">
@@ -313,12 +326,20 @@ function AccountLetterCard({ acc, vendorId, onRefetch }) {
           <span className="text-sm text-grey truncate">{acc.account_letter.filename}</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <button onClick={() => setViewerOpen(true)} className="text-[#16A34A] hover:opacity-80 transition-opacity">
-            <CheckCircle2 className="size-5" />
-          </button>
-          <button onClick={() => setViewerOpen(true)} className="text-[#EF4444] hover:opacity-80 transition-opacity">
-            <XCircle className="size-5" />
-          </button>
+          {acc.account_letter.approved === "0" ? (
+            <>
+              <button onClick={() => setViewerOpen(true)} className="text-[#16A34A] hover:opacity-80 transition-opacity">
+                <CheckCircle2 className="size-5" />
+              </button>
+              <button onClick={() => setViewerOpen(true)} className="text-[#EF4444] hover:opacity-80 transition-opacity">
+                <XCircle className="size-5" />
+              </button>
+            </>
+          ) : acc.account_letter.approved === "1" ? (
+            <span className="text-xs font-medium px-2 py-1 rounded-full bg-lightGreen text-[#16A34A]">Accepted</span>
+          ) : acc.account_letter.approved === "2" ? (
+            <span className="text-xs font-medium px-2 py-1 rounded-full bg-[#FEE2E2] text-[#DC2626]">Rejected</span>
+          ) : null}
         </div>
       </div>
 
@@ -330,6 +351,7 @@ function AccountLetterCard({ acc, vendorId, onRefetch }) {
           onClose={() => setViewerOpen(false)}
           onSuccess={onRefetch}
           onRejectClick={() => { setViewerOpen(false); setRejectOpen(true) }}
+          onApprove={handleApprove}
         />
       )}
 
@@ -483,6 +505,7 @@ export default function PendingVendorDetailPage() {
   const [accounts, setAccounts]           = useState([])
   const [accLoading, setAccLoading]       = useState(false)
   const [accError, setAccError]           = useState(false)
+  const [creatingAccount, setCreatingAccount] = useState(false)
 
   const fetchVendorInfo = () => {
     setLoading(true); setError(false)
@@ -506,6 +529,31 @@ export default function PendingVendorDetailPage() {
       .finally(() => setKycLoading(false))
   }
 
+  const refreshAccountLetters = () => {
+    setAccLoading(true); setAccError(false)
+    return getVendorAccountLetters(params.id)
+      .then((res) => setAccounts(res?.data?.accounts ?? []))
+      .catch(() => setAccError(true))
+      .finally(() => setAccLoading(false))
+  }
+
+  const handleCreateAccount = async () => {
+    if (creatingAccount) return
+    setCreatingAccount(true)
+    try {
+      const res = await createVendorAccount(params.id)
+      if (res?.res === "success") {
+        await refreshAccountLetters()
+      } else {
+        toast(<ErrorToast message={res?.messg || "Failed to create account."} />, { style: { padding: 0 } })
+      }
+    } catch {
+      toast(<ErrorToast message="Something went wrong. Please try again." />, { style: { padding: 0 } })
+    } finally {
+      setCreatingAccount(false)
+    }
+  }
+
   useEffect(() => {
     if (activeTab === "vendor-information") {
       setLoading(true); setError(false)
@@ -523,11 +571,7 @@ export default function PendingVendorDetailPage() {
     }
 
     if (activeTab === "account-letter") {
-      setAccLoading(true); setAccError(false)
-      getVendorAccountLetters(params.id)
-        .then((res) => setAccounts(res?.data?.accounts ?? []))
-        .catch(() => setAccError(true))
-        .finally(() => setAccLoading(false))
+      refreshAccountLetters()
     }
   }, [activeTab, params.id])
 
@@ -704,7 +748,32 @@ export default function PendingVendorDetailPage() {
             </Card>
           ) : accounts.length === 0 ? (
             <Card className="border border-borderGrey rounded-2xl shadow-sm py-0">
-              <CardContent className="p-6 text-center py-16 text-grey text-sm">No account information found.</CardContent>
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <h4 className="text-base font-semibold text-customBlack">Bank Account Details</h4>
+                  <button
+                    onClick={handleCreateAccount}
+                    disabled={creatingAccount}
+                    className="text-sm font-medium text-blue hover:opacity-80 transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {creatingAccount ? "Creating..." : "Create Account"} →
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-4 gap-4 border-t border-borderGrey pt-4">
+                  <p className="text-sm text-grey">Bank Name</p>
+                  <p className="text-sm text-grey">Account Number</p>
+                  <p className="text-sm text-grey">Account Name</p>
+                  <p className="text-sm text-grey">Status</p>
+                </div>
+
+                <div className="grid grid-cols-4 gap-4">
+                  <p className="text-sm font-semibold text-customBlack">—</p>
+                  <p className="text-sm font-semibold text-customBlack">—</p>
+                  <p className="text-sm font-semibold text-customBlack">—</p>
+                  <StatusBadge status="Not Created" />
+                </div>
+              </CardContent>
             </Card>
           ) : (
             <>
@@ -751,11 +820,7 @@ export default function PendingVendorDetailPage() {
                       Account Letter for {acc.anchor_name}
                     </h4>
                     <AccountLetterCard acc={acc} vendorId={params.id} onRefetch={() => {
-                      setAccLoading(true); setAccError(false)
-                      getVendorAccountLetters(params.id)
-                        .then((res) => setAccounts(res?.data?.accounts ?? []))
-                        .catch(() => setAccError(true))
-                        .finally(() => setAccLoading(false))
+                      refreshAccountLetters()
                     }} />
                   </CardContent>
                 </Card>

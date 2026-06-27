@@ -12,7 +12,7 @@ export const ErrorToast = ({ message, closeToast }) => (
       <p className="text-sm text-red-700 mt-1">{message}</p>
     </div>
     <button 
-      onClick={closeToast}
+      onClick={() => closeToast?.()}
       className="flex-shrink-0 text-red-500 hover:text-red-700"
     >
       ✕
@@ -30,7 +30,7 @@ export const SuccessToast = ({ message, closeToast }) => (
       <p className="text-sm text-green-700 mt-1">{message}</p>
     </div>
     <button 
-      onClick={closeToast}
+      onClick={() => closeToast?.()}
       className="flex-shrink-0 text-green-500 hover:text-green-700"
     >
       ✕
@@ -48,7 +48,7 @@ export const InfoToast = ({ message, closeToast }) => (
       <p className="text-sm text-blue-700 mt-1">{message}</p>
     </div>
     <button 
-      onClick={closeToast}
+      onClick={() => closeToast?.()}
       className="flex-shrink-0 text-blue-500 hover:text-blue-700"
     >
       ✕
@@ -66,7 +66,7 @@ export const WarningToast = ({ message, closeToast }) => (
       <p className="text-sm text-yellow-700 mt-1">{message}</p>
     </div>
     <button 
-      onClick={closeToast}
+      onClick={() => closeToast?.()}
       className="flex-shrink-0 text-yellow-500 hover:text-yellow-700"
     >
       ✕

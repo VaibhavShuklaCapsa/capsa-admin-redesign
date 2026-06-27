@@ -18,7 +18,7 @@ import {
 import StatusBadge from "../../../components/ui/StatusBadge"
 import InfoField from "../../../components/ui/InfoField"
 import PageLoader from "../../../components/ui/PageLoader"
-import { getPendingInvestorDetail, getInvestorKycDocuments, investorKycDocAction } from "../../../services/pendingInvestorDetail"
+import { getPendingInvestorDetail, getInvestorKycDocuments, investorKycDocAction, verifyInvestorBvn, verifyInvestorNin, getInvestorBankAccount, createInvestorAccount } from "../../../services/pendingInvestorDetail"
 import { toast } from "react-toastify"
 import { ErrorToast, SuccessToast } from "../../../components/toast"
 
@@ -34,6 +34,7 @@ const ACTIONS = [
   { title: "View KYC Documents" },
   { title: "Delete Account" },
 ]
+
 
 // ── Dialog shared styles ──────────────────────────────────────────────────────
 
@@ -349,6 +350,51 @@ function KycDocCard({ doc, investorId, onRefetch }) {
   )
 }
 
+// ── Verifiable Field ──────────────────────────────────────────────────────────
+
+function VerifiableField({ label, value, buttonLabel, onVerify, onSuccess, verified }) {
+  const [verifying, setVerifying] = useState(false)
+
+  const handleClick = async () => {
+    if (!onVerify) return
+    setVerifying(true)
+    try {
+      const res = await onVerify()
+      if (res?.res === "success") {
+        toast(<SuccessToast message={res?.messg || "Verified successfully."} />, { style: { padding: 0 } })
+        onSuccess?.()
+      } else {
+        toast(<ErrorToast message={res?.messg || "Verification failed."} />, { style: { padding: 0 } })
+      }
+    } catch {
+      toast(<ErrorToast message="Something went wrong." />, { style: { padding: 0 } })
+    } finally {
+      setVerifying(false)
+    }
+  }
+
+  return (
+    <section className="min-w-0">
+      <p className="text-sm text-grey mb-1">{label}</p>
+      <p className="text-sm font-semibold text-customBlack mb-2">{value || "—"}</p>
+      {verified ? (
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-[#16A34A]">
+          <CheckCircle2 className="size-3.5" /> Verified
+        </span>
+      ) : (
+        <Button
+          size="sm"
+          onClick={handleClick}
+          disabled={verifying}
+          className="bg-blue hover:bg-blue/90 text-white h-8 px-4 text-xs rounded-lg"
+        >
+          {verifying ? "Verifying..." : buttonLabel}
+        </Button>
+      )}
+    </section>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function PendingInvestorDetailPage() {
@@ -359,12 +405,25 @@ export default function PendingInvestorDetailPage() {
 
   const [investorInfo, setInvestorInfo]   = useState(null)
   const [directorsInfo, setDirectorsInfo] = useState(null)
-  const [loading, setLoading]             = useState(false)
+  const [loading, setLoading]             = useState(true)
   const [error, setError]                 = useState(false)
 
   const [kycDocs, setKycDocs]             = useState([])
   const [kycLoading, setKycLoading]       = useState(false)
   const [kycError, setKycError]           = useState(false)
+  const [accountLoading, setAccountLoading]   = useState(false)
+  const [accountError, setAccountError]       = useState(false)
+  const [accountData, setAccountData]         = useState(null)
+  const [creatingAccount, setCreatingAccount] = useState(false)
+
+  const fetchInvestorInfo = () => {
+    getPendingInvestorDetail(params.id)
+      .then((res) => {
+        setInvestorInfo(res?.data?.investor_information ?? null)
+        setDirectorsInfo(res?.data?.directors_information ?? null)
+      })
+      .catch(() => {})
+  }
 
   const fetchKycDocuments = () => {
     setKycLoading(true); setKycError(false)
@@ -372,6 +431,32 @@ export default function PendingInvestorDetailPage() {
       .then((res) => setKycDocs(res?.data?.kyc_documents ?? []))
       .catch(() => setKycError(true))
       .finally(() => setKycLoading(false))
+  }
+
+  const fetchAccountData = () => {
+    setAccountLoading(true); setAccountError(false)
+    getInvestorBankAccount(params.id)
+      .then((res) => setAccountData(res?.data ?? null))
+      .catch(() => setAccountError(true))
+      .finally(() => setAccountLoading(false))
+  }
+
+  const handleCreateAccount = async () => {
+    if (creatingAccount) return
+    setCreatingAccount(true)
+    try {
+      const res = await createInvestorAccount(accountData?.investor_pan)
+      if (res?.res === "success") {
+        toast(<SuccessToast message={res?.messg || "Account created successfully."} />, { style: { padding: 0 } })
+        fetchAccountData()
+      } else {
+        toast(<ErrorToast message={res?.messg || "Failed to create account."} />, { style: { padding: 0 } })
+      }
+    } catch {
+      toast(<ErrorToast message="Something went wrong. Please try again." />, { style: { padding: 0 } })
+    } finally {
+      setCreatingAccount(false)
+    }
   }
 
   useEffect(() => {
@@ -388,6 +473,10 @@ export default function PendingInvestorDetailPage() {
 
     if (activeTab === "kyc-documents") {
       fetchKycDocuments()
+    }
+
+    if (activeTab === "account") {
+      fetchAccountData()
     }
   }, [activeTab, params.id])
 
@@ -418,6 +507,9 @@ export default function PendingInvestorDetailPage() {
           </TabsTrigger>
           <TabsTrigger value="kyc-documents" className="rounded-lg px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             KYC Documents
+          </TabsTrigger>
+          <TabsTrigger value="account" className="rounded-lg px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            Account and Account Letter
           </TabsTrigger>
         </TabsList>
 
@@ -468,13 +560,14 @@ export default function PendingInvestorDetailPage() {
 
                   {/* Row 1 — common fields */}
                   <section className="grid grid-cols-5 gap-6 border-t border-borderGrey pt-6">
-                    <section className="min-w-0">
-                      <p className="text-sm text-grey mb-1">BVN</p>
-                      <p className="text-sm font-semibold text-customBlack mb-2">{investorInfo.bvn || "—"}</p>
-                      <Button size="sm" disabled className="bg-blue hover:bg-blue/90 text-white h-8 px-4 text-xs rounded-lg">
-                        Verify BVN
-                      </Button>
-                    </section>
+                    <VerifiableField
+                      label="BVN"
+                      value={investorInfo.bvn}
+                      buttonLabel="Verify BVN"
+                      verified={investorInfo.bvn_verified === true}
+                      onVerify={() => verifyInvestorBvn({ user_id: Number(params.id), bvn: investorInfo.bvn })}
+                      onSuccess={fetchInvestorInfo}
+                    />
                     <InfoField label="Email Address" value={investorInfo.email || "—"} editable />
                     <InfoField label="Phone Number" value={investorInfo.phone || "—"} editable />
                     <InfoField label="Investor Type" value={investorInfo.investor_type || "—"} />
@@ -509,13 +602,14 @@ export default function PendingInvestorDetailPage() {
                       <InfoField label="Director's Name" value={directorsInfo?.director_name || "—"} />
                       <InfoField label="Phone Number" value={directorsInfo?.phone || "—"} />
                       <InfoField label="BVN" value={directorsInfo?.bvn || "—"} />
-                      <section className="min-w-0">
-                        <p className="text-sm text-grey mb-1">NIN</p>
-                        <p className="text-sm font-semibold text-customBlack mb-2">{directorsInfo?.nin || "—"}</p>
-                        <Button size="sm" disabled className="bg-blue hover:bg-blue/90 text-white h-8 px-4 text-xs rounded-lg">
-                          Verify NIN
-                        </Button>
-                      </section>
+                      <VerifiableField
+                        label="NIN"
+                        value={directorsInfo?.nin}
+                        buttonLabel="Verify NIN"
+                        verified={directorsInfo?.nin_verified === true}
+                        onVerify={() => verifyInvestorNin({ user_id: Number(params.id), nin: directorsInfo?.nin })}
+                        onSuccess={fetchInvestorInfo}
+                      />
                       <InfoField label="Political Affiliation" value={directorsInfo?.political_affiliation || "—"} />
                     </section>
                   </CardContent>
@@ -548,6 +642,50 @@ export default function PendingInvestorDetailPage() {
                       <KycDocCard doc={doc} investorId={params.id} onRefetch={fetchKycDocuments} />
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* ── Tab 3: Account and Account Letter ── */}
+        <TabsContent value="account" className="space-y-4">
+          {accountLoading ? (
+            <Card className="border border-borderGrey rounded-2xl shadow-sm py-0">
+              <CardContent className="p-6 text-center py-16 text-grey text-sm">Loading account information...</CardContent>
+            </Card>
+          ) : accountError ? (
+            <Card className="border border-borderGrey rounded-2xl shadow-sm py-0">
+              <CardContent className="p-6 text-center py-16 text-grey text-sm">Unable to load account information. Please try again.</CardContent>
+            </Card>
+          ) : (
+            <Card className="border border-borderGrey rounded-2xl shadow-sm py-0">
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-base font-semibold text-customBlack">Bank Account Details</h4>
+                  {accountData?.status === "Not Created" && (
+                    <button
+                      onClick={handleCreateAccount}
+                      disabled={creatingAccount}
+                      className="text-sm font-medium text-blue hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {creatingAccount ? "Creating..." : "Create Account →"}
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-5 gap-4 border-t border-borderGrey pt-4">
+                  <p className="text-sm text-grey">Investor PAN</p>
+                  <p className="text-sm text-grey">Bank Name</p>
+                  <p className="text-sm text-grey">Account Number</p>
+                  <p className="text-sm text-grey">Account Name</p>
+                  <p className="text-sm text-grey">Status</p>
+                </div>
+                <div className="grid grid-cols-5 gap-4 border-t border-borderGrey pt-4">
+                  <p className="text-sm font-semibold text-customBlack">{accountData?.investor_pan || "—"}</p>
+                  <p className="text-sm text-customBlack">{accountData?.bank_name || "—"}</p>
+                  <p className="text-sm text-customBlack">{accountData?.account_number || "—"}</p>
+                  <p className="text-sm text-customBlack">{accountData?.account_name || "—"}</p>
+                  <StatusBadge status={accountData?.status} />
                 </div>
               </CardContent>
             </Card>
