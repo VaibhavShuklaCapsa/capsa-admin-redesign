@@ -192,8 +192,10 @@ function KycDocViewerDialog({ doc, investorId, open, onClose, onSuccess, onRejec
         aria-describedby={undefined}
         overlayClassName="bg-transparent"
         style={{
-          width: "580px",
+          width: "720px",
           maxWidth: "95vw",
+          height: "95vh",
+          maxHeight: "95vh",
           padding: "24px",
           display: "flex",
           flexDirection: "column",
@@ -214,8 +216,8 @@ function KycDocViewerDialog({ doc, investorId, open, onClose, onSuccess, onRejec
         {/* Document preview */}
         <div
           style={{
-            height: "380px",
-            flexShrink: 0,
+            flex: "1 1 0",
+            minHeight: 0,
             alignSelf: "stretch",
             borderRadius: "8px",
             overflow: "hidden",

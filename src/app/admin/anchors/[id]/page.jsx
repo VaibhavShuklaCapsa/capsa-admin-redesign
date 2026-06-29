@@ -79,7 +79,7 @@ function AdminCard({ admin, onEditClick, onDeleteClick }) {
   )
 }
 
-function SubAdminSettings({ panNumber, onAddAdmin }) {
+function SubAdminSettings({ panNumber, onAddAdmin, refreshTrigger }) {
   const [admins, setAdmins]               = useState([])
   const [total, setTotal]                 = useState(0)
   const [search, setSearch]               = useState("")
@@ -101,6 +101,7 @@ function SubAdminSettings({ panNumber, onAddAdmin }) {
   }
 
   useEffect(() => { fetchAdmins() }, [panNumber])
+  useEffect(() => { if (refreshTrigger > 0) fetchAdmins(search) }, [refreshTrigger])
 
   const handleSearch = (val) => {
     setSearch(val)
@@ -163,16 +164,18 @@ function SubAdminSettings({ panNumber, onAddAdmin }) {
                 <div className="grid grid-cols-2 gap-4">
                   {admins.map((admin, i) => (
                     <AdminCard key={admin.sub_anchor_admin ?? i} admin={{
-                      id: admin.sub_anchor_admin,
-                      name: admin.name,
-                      email: admin.email,
-                      role: admin.role_label,
+                      id:         admin.sub_anchor_admin,
+                      name:       admin.name,
+                      first_name: admin.first_name,
+                      last_name:  admin.last_name,
+                      email:      admin.email,
+                      role:       admin.role_label,
                       date_joined: admin.joined_at,
-                      approve_reject_invoice: admin.approve_reject_invoice,
-                      review_invoice:         admin.review_invoice,
-                      upload_invoice:         admin.upload_invoice,
-                      invite_vendor:          admin.invite_vendor,
-                      add_admin:              admin.add_admin,
+                      approve_reject_invoice: admin.privileges?.approve_reject_invoice,
+                      review_invoice:         admin.privileges?.review_invoice,
+                      upload_invoice:         admin.privileges?.upload_invoice,
+                      invite_vendor:          admin.privileges?.invite_vendor,
+                      add_admin:              admin.privileges?.add_admin,
                     }} onEditClick={handleEditClick} onDeleteClick={handleDeleteClick} />
                   ))}
                 </div>
@@ -224,6 +227,7 @@ export default function AnchorDetailPage() {
   const [enableRFDialogOpen, setEnableRFDialogOpen]   = useState(false)
   const [emailDialogOpen, setEmailDialogOpen]         = useState(false)
   const [addAdminOpen, setAddAdminOpen]               = useState(false)
+  const [adminRefreshKey, setAdminRefreshKey]         = useState(0)
 
   const fetchAnchor = () => {
     setLoading(true); setError(false)
@@ -382,7 +386,7 @@ export default function AnchorDetailPage() {
         {/* ── Tab 2: Beneficiary Account — pending API ── */}
         {/* ── Tab 2: Sub-Admin Settings ── */}
         <TabsContent value="sub-admin-settings">
-          <SubAdminSettings panNumber={params.id} onAddAdmin={() => setAddAdminOpen(true)} />
+          <SubAdminSettings panNumber={params.id} onAddAdmin={() => setAddAdminOpen(true)} refreshTrigger={adminRefreshKey} />
         </TabsContent>
       </Tabs>
 
@@ -422,7 +426,7 @@ export default function AnchorDetailPage() {
         open={addAdminOpen}
         onOpenChange={setAddAdminOpen}
         panNumber={params.id}
-        onSuccess={() => setActiveTab("sub-admin-settings")}
+        onSuccess={() => { setActiveTab("sub-admin-settings"); setAdminRefreshKey((k) => k + 1) }}
       />
 
       <EditAnchorEmailDialog
