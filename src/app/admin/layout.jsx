@@ -4,7 +4,6 @@ import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { ChevronDown } from "lucide-react"
-import { ToastProvider } from "../admin/components/ToastProvider"
 
 const TAB_ICON = (name) => `/icons/admin/tabs/Capsa Redesign_icon/${name}`
 
@@ -142,7 +141,6 @@ export default function AdminLayout({ children }) {
           {children}
         </main>
       </div>
-      <ToastProvider />
     </div>
   )
 }

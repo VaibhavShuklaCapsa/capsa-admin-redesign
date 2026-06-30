@@ -7,7 +7,7 @@ import PageLoader from "../../components/ui/PageLoader"
 import VendorDetailContent from "../../components/ui/VendorDetailContent"
 import { getInvestorDetailData, getInvestorBeneficiaryAccount, getInvestorEmailPreferences, updateInvestorEmailPreference, updateInvestorBeneficiary, editInvestorContact } from "../../services/investorDetail"
 import { toast } from "react-toastify"
-import { SuccessToast, ErrorToast } from "../../components/toast"
+import { ErrorToast } from "../../components/toast"
 
 export default function InvestorDetailPage() {
   const router      = useRouter()
@@ -21,9 +21,7 @@ export default function InvestorDetailPage() {
       .then((res) => {
         setData(res)
         setLoading(false)
-        if (res?.res === "success") {
-          toast(<SuccessToast message={res?.messg} />, { style: { padding: 0 } })
-        } else if (res?.messg) {
+        if (res?.res !== "success" && res?.messg) {
           toast(<ErrorToast message={res?.messg} />, { style: { padding: 0 } })
         }
       })

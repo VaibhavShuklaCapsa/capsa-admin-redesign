@@ -20,3 +20,12 @@ export const getAccountTransactions = async ({ account_number = "", page_number 
   const response = await http.postData({ account_number, page_number, page_size, search, from_date, to_date }, apiRoute)
   return response.data  // { res, data: { account_number, transactions, pagination, filters }, messg }
 }
+
+// Calls /redesign/admin/accounts-by-role
+// payload: { role }
+export const getAccountsByRole = async (role = "ADMIN") => {
+  const apiRoute = routes.AccountsByRole()
+  const http = new HttpService()
+  const response = await http.postData({ role }, apiRoute)
+  return response.data  // { res, data: { accounts, total }, messg }
+}

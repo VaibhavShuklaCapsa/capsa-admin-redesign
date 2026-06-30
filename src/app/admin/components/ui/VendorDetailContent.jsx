@@ -114,9 +114,7 @@ export default function VendorDetailContent({
     }
 
     const showTabToast = (res) => {
-      if (res?.res === "success") {
-        toast(<SuccessToast message={res?.messg} />, { style: { padding: 0 } })
-      } else if (res?.messg) {
+      if (res?.res !== "success" && res?.messg) {
         toast(<ErrorToast message={res?.messg} />, { style: { padding: 0 } })
       }
     }
@@ -319,7 +317,7 @@ export default function VendorDetailContent({
               <Card key={index} className="border border-borderGrey rounded-2xl shadow-sm py-0">
                 <CardContent className="p-6 space-y-4">
                   <h4 className="text-base font-semibold text-customBlack">
-                    Account Letter for Anchor #{index + 1}
+                    Account Letter for {letter.anchor_name}
                   </h4>
                   <div className="w-64">
                     <DetailCard

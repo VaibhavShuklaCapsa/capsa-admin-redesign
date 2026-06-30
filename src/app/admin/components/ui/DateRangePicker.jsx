@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { format, addMonths } from "date-fns"
+import { format } from "date-fns"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Calendar } from "./calendar"
@@ -16,9 +16,9 @@ export default function DateRangePicker({
   value,
   onChange,
 }) {
-  const [range, setRange]           = useState(value)
-  const [leftMonth, setLeftMonth]   = useState(new Date())
-  const [rightMonth, setRightMonth] = useState(addMonths(new Date(), 1))
+  const [range, setRange]   = useState(value)
+  const [month, setMonth]   = useState(new Date())
+  const [open, setOpen]     = useState(false)
 
   const displayLabel =
     range?.from && range?.to
@@ -28,10 +28,13 @@ export default function DateRangePicker({
   const handleSelect = (selected) => {
     setRange(selected)
     onChange?.(selected)
+    if (selected?.from && selected?.to) {
+      setOpen(false)
+    }
   }
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -48,24 +51,14 @@ export default function DateRangePicker({
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="end" collisionPadding={24}>
-        <div className="flex">
-          <Calendar
-            mode="range"
-            selected={range}
-            onSelect={handleSelect}
-            month={leftMonth}
-            onMonthChange={setLeftMonth}
-            disabled={range?.to ? { after: range.to } : undefined}
-          />
-          <Calendar
-            mode="range"
-            selected={range}
-            onSelect={handleSelect}
-            month={rightMonth}
-            onMonthChange={setRightMonth}
-            disabled={range?.from ? { before: range.from } : undefined}
-          />
-        </div>
+        <Calendar
+          mode="range"
+          selected={range}
+          onSelect={handleSelect}
+          month={month}
+          onMonthChange={setMonth}
+          numberOfMonths={2}
+        />
       </PopoverContent>
     </Popover>
   )

@@ -515,7 +515,7 @@ export default function PendingInvestorDetailPage() {
             KYC Documents
           </TabsTrigger>
           <TabsTrigger value="account" className="rounded-lg px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Account and Account Letter
+            Account
           </TabsTrigger>
         </TabsList>
 
@@ -669,7 +669,11 @@ export default function PendingInvestorDetailPage() {
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-base font-semibold text-customBlack">Bank Account Details</h4>
-                  {accountData?.status === "Not Created" && accVerification && Object.values(accVerification).every((v) => v === true) && (
+                  {accountData?.status === "Not Created" && accVerification &&
+                    accVerification.bvn_verified === true &&
+                    accVerification.nin_verified === true &&
+                    accVerification.docs_verified === true &&
+                    accVerification.kyc_pending_review === false && (
                     <button
                       onClick={handleCreateAccount}
                       disabled={creatingAccount}

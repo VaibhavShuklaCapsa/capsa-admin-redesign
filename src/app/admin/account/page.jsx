@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table"
-import { getAccountOverview, getAccountTransactions } from "../services/account"
+import { getAccountOverview, getAccountTransactions, getAccountsByRole } from "../services/account"
 import { toast } from "react-toastify"
 import { ErrorToast } from "../components/toast"
 import ConfirmActionModal from "../components/modals/ConfirmActionModal"
@@ -66,15 +66,15 @@ const QUICK_ACTIONS = [
   { id: "freeze",   label: "Freeze Fund Transfer"           },
 ]
 
-const ACCOUNT_OPTIONS = ["Admin", "Vendor", "Investor"]
-
 export default function AccountPage() {
   const [loading, setLoading]           = useState(true)
   const [overview, setOverview]         = useState(null)
   const [transactions, setTransactions] = useState([])
   const [totalPages, setTotalPages]     = useState(1)
   const [currentPage, setCurrentPage]   = useState(1)
-  const [selectedAccount, setSelectedAccount] = useState("Admin")
+  const DEFAULT_ACCOUNT = { name: "ADMIN", account_number: "" }
+  const [accountOptions, setAccountOptions] = useState([DEFAULT_ACCOUNT])
+  const [selectedAccount, setSelectedAccount] = useState(DEFAULT_ACCOUNT)
   const [search, setSearch]             = useState("")
   const [fromDate, setFromDate]         = useState("")
   const [toDate, setToDate]             = useState("")
@@ -82,8 +82,7 @@ export default function AccountPage() {
   const [freezeModal, setFreezeModal]     = useState(false)
   const [withdrawModal, setWithdrawModal] = useState(false)
 
-  // account_number is empty string → defaults to admin/platform
-  const accountNumber = ""
+  const accountNumber = selectedAccount.account_number
 
   const showErrorToast = (res) => {
     if (res?.res !== "success" && res?.messg) {
@@ -91,8 +90,8 @@ export default function AccountPage() {
     }
   }
 
-  const fetchTransactions = async ({ page = 1, searchVal = "", from = "", to = "" }) => {
-    const res = await getAccountTransactions({ account_number: accountNumber, page_number: page, page_size: PAGE_SIZE, search: searchVal, from_date: from, to_date: to })
+  const fetchTransactions = async ({ page = 1, searchVal = "", from = "", to = "", account = accountNumber }) => {
+    const res = await getAccountTransactions({ account_number: account, page_number: page, page_size: PAGE_SIZE, search: searchVal, from_date: from, to_date: to })
     setTransactions(res.data?.transactions ?? [])
     setTotalPages(res.data?.pagination?.total_pages ?? 1)
     return res
@@ -113,6 +112,31 @@ export default function AccountPage() {
       .catch(() => { /* keep PageLoader */ })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    getAccountsByRole("ADMIN")
+      .then((res) => {
+        const accounts = res?.data?.accounts?.filter((a) => a.name) ?? []
+        setAccountOptions(accounts.length > 0 ? accounts : [DEFAULT_ACCOUNT])
+      })
+      .catch(() => setAccountOptions([DEFAULT_ACCOUNT]))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleSelectAccount = (acc) => {
+    setSelectedAccount(acc)
+    setSearch(""); setFromDate(""); setToDate(""); setCurrentPage(1)
+    Promise.all([
+      getAccountOverview(acc.account_number),
+      fetchTransactions({ page: 1, account: acc.account_number }),
+    ])
+      .then(([overviewRes, txRes]) => {
+        setOverview(overviewRes.data ?? null)
+        showErrorToast(overviewRes)
+        showErrorToast(txRes)
+      })
+      .catch(() => {})
+  }
 
   const handlePageChange = (page) => {
     setCurrentPage(page)
@@ -154,14 +178,14 @@ export default function AccountPage() {
         <DropdownMenuTrigger asChild>
           <Button variant="outline" className="gap-2 h-10 px-4 border-borderGrey font-semibold text-customBlack">
             <BankIcon color="#6B7280" />
-            {selectedAccount}
+            {selectedAccount.name}
             <ChevronDown className="size-4 text-grey" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-40">
-          {ACCOUNT_OPTIONS.map((opt) => (
-            <DropdownMenuItem key={opt} className="cursor-pointer" onClick={() => setSelectedAccount(opt)}>
-              {opt}
+          {accountOptions.map((opt) => (
+            <DropdownMenuItem key={opt.account_number || opt.name} className="cursor-pointer" onClick={() => handleSelectAccount(opt)}>
+              {opt.name}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>

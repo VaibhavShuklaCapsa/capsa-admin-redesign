@@ -553,6 +553,9 @@ export const routes = {
     AdminAccountTransactions: () => {
         return `/redesign/admin/account-transactions`
     },
+    AccountsByRole: () => {
+        return `/redesign/admin/accounts-by-role`
+    },
 
     // Manual Settlement
     ManualSettlementInvoices: () => {
@@ -604,7 +607,7 @@ export const routes = {
         return `/redesign/admin/balance-history`
     },
     ReconciliationAccountStatement: () => {
-        return `/dashboard/a/reconciliation/accountStatement`
+        return `/redesign/admin/account-transactions-download`
     },
 
     // Pending Accounts
@@ -780,13 +783,10 @@ export const routes = {
 
     // Transfer Funds
     TransferBetweenAccounts: () => {
-        return `/dashboard/a/transferFunds/between`
+        return `/redesign/admin/transfer-between-accounts`
     },
     DebitFromAccount: () => {
-        return `/dashboard/a/transferFunds/debit`
-    },
-    GetAccountOptions: () => {
-        return `/dashboard/a/transferFunds/accounts`
+        return `/redesign/admin/debit-from-account`
     },
     TransferFundsAccountsList: () => {
         return `/redesign/admin/transfer-funds-accounts-list`

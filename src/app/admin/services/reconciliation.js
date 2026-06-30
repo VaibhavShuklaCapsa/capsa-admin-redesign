@@ -15,13 +15,29 @@ export const viewBalanceHistory = async ({ page_number = 1, page_size = 10, sear
   return response.data  // { res, data: { balance_list, pagination, filters }, messg }
 }
 
-export const viewAccountStatement = async (data) => {
+export const viewAccountStatement = async ({
+  account_number = "",
+  page_number = 1,
+  page_size = 10,
+  search = "",
+  from_date = "",
+  to_date = "",
+} = {}) => {
   const apiRoute = routes.ReconciliationAccountStatement()
-  try {
-    const http = new HttpService()
-    const response = await http.postData(data, apiRoute)
-    return response?.data ?? data
-  } catch {
-    return { ...data, apiRoute }
-  }
+  const http = new HttpService()
+  const response = await http.postData(
+    { account_number, page_number, page_size, search, from_date, to_date },
+    apiRoute
+  )
+
+  const csv = response?.data
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+  const blobUrl = window.URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.href = blobUrl
+  link.setAttribute("download", `account-statement-${Date.now()}.csv`)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(blobUrl)
 }
