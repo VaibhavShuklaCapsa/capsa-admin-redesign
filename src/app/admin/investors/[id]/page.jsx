@@ -57,7 +57,7 @@ export default function InvestorDetailPage() {
         companyDocumentsTitle="Investor Documents"
         directorInfoTitle="Director's Information"
         directorDocumentsTitle="Director Information Documents"
-        anchorLabel="Anchor"
+        showAnchorField={false}
         refreshVendorInfo={loadInvestor}
         editContactFn={editInvestorContact}
         fetchBeneficiaryFn={getInvestorBeneficiaryAccount}

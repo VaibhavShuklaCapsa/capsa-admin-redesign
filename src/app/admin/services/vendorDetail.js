@@ -108,16 +108,18 @@ export const getVendorDetailData = async (bvn) => {
     directorNin:          d.director?.nin                  ?? "",
     politicalAffiliation: d.director?.political_affiliation ?? "",
 
-    // Documents — map { label, filename, url } → { title, file, url }
+    // Documents — map { label, filename, url, ext } → { title, file, url, ext }
     companyDocuments:  (d.company_docs ?? []).map((doc) => ({
       title: doc.label    ?? "",
       file:  doc.filename ?? "",
       url:   doc.url      ?? null,
+      ext:   doc.ext      ?? "",
     })),
     directorDocuments: (d.director_docs ?? []).map((doc) => ({
       title: doc.label    ?? "",
       file:  doc.filename ?? "",
       url:   doc.url      ?? null,
+      ext:   doc.ext      ?? "",
     })),
   }
 

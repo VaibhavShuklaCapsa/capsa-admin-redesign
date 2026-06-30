@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ChevronDown, AlertCircle } from "lucide-react"
 import { getVendorAnchorLetters, getVendorBeneficiaryAccount, getVendorEmailPreferences, updateVendorEmailPreference, editVendorContact } from "../../services/vendorDetail"
 import { toast } from "react-toastify"
@@ -12,6 +12,7 @@ import { Card, CardContent } from "./card"
 import { Button } from "./button"
 import { Input } from "./input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs"
+import { Dialog, DialogContent, DialogTitle } from "./dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +23,127 @@ import EditFieldModal from "../modals/EditFieldModal"
 import ConfirmActionModal from "../modals/ConfirmActionModal"
 import UpdateBeneficiaryModal from "../modals/UpdateBeneficiaryModal"
 
+const dialogBtnBase = {
+  display: "flex",
+  height: "44px",
+  padding: "8px 16px",
+  justifyContent: "center",
+  alignItems: "center",
+  gap: "8px",
+  borderRadius: "8px",
+  fontFamily: "Satoshi",
+  fontSize: "16px",
+  fontWeight: 500,
+  lineHeight: "140%",
+  cursor: "pointer",
+}
+
+// ── Document viewer dialog — preview + download, no approve/reject ─────────────
+
+function DocumentViewerDialog({ doc, open, onClose }) {
+  const [blobUrl, setBlobUrl]         = useState(null)
+  const [blobLoading, setBlobLoading] = useState(false)
+
+  const fullUrl = doc?.url || null
+  const ext = (doc?.ext || "").toLowerCase()
+  const isImage = ["png", "jpg", "jpeg", "gif", "webp"].includes(ext)
+  const isDocx  = ["docx", "doc"].includes(ext)
+
+  useEffect(() => {
+    if (!open || !fullUrl || isImage || isDocx) { setBlobUrl(null); return }
+    let objectUrl = null
+    setBlobLoading(true)
+    fetch(fullUrl)
+      .then((r) => r.blob())
+      .then((blob) => {
+        const typed = new Blob([blob], { type: "application/pdf" })
+        objectUrl = URL.createObjectURL(typed)
+        setBlobUrl(objectUrl)
+      })
+      .catch(() => setBlobUrl(null))
+      .finally(() => setBlobLoading(false))
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl) }
+  }, [open, fullUrl, isImage, isDocx])
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent
+        aria-describedby={undefined}
+        overlayClassName="bg-transparent"
+        style={{
+          width: "720px",
+          maxWidth: "95vw",
+          height: "95vh",
+          maxHeight: "95vh",
+          padding: "24px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-start",
+          gap: "24px",
+          borderRadius: "8px",
+          border: "1px solid #E4E4E7",
+          background: "#FFF",
+          boxShadow: "0 4px 6px -4px rgba(16,24,40,0.10), 0 10px 15px -3px rgba(0,0,0,0.10)",
+        }}
+      >
+        <DialogTitle
+          style={{ color: "#09090B", fontFamily: "Satoshi", fontSize: "18px", fontWeight: 700, lineHeight: "140%", margin: 0 }}
+        >
+          {doc?.label}
+        </DialogTitle>
+
+        <div
+          style={{
+            flex: "1 1 0",
+            minHeight: 0,
+            alignSelf: "stretch",
+            borderRadius: "8px",
+            overflow: "hidden",
+            background: "rgba(204, 234, 248, 0.50)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {fullUrl ? (
+            isImage ? (
+              <img src={fullUrl} alt={doc?.label} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+            ) : isDocx ? (
+              <iframe
+                src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fullUrl)}`}
+                title={doc?.label}
+                style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+              />
+            ) : blobLoading ? (
+              <div style={{ color: "#71717A", fontSize: "14px" }}>Loading document...</div>
+            ) : blobUrl ? (
+              <iframe
+                src={blobUrl}
+                title={doc?.label}
+                style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+              />
+            ) : (
+              <div style={{ color: "#71717A", fontSize: "14px" }}>Unable to load document.</div>
+            )
+          ) : (
+            <div style={{ color: "#71717A", fontSize: "14px" }}>No document available.</div>
+          )}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", width: "100%" }}>
+          <button
+            onClick={() => fullUrl && window.open(fullUrl, "_blank")}
+            disabled={!fullUrl}
+            style={{ ...dialogBtnBase, background: "#FFF", border: "1px solid #E4E4E7", color: "#09090B", opacity: !fullUrl ? 0.4 : 1 }}
+          >
+            Download
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function VendorDetailContent({
@@ -31,6 +153,7 @@ export default function VendorDetailContent({
   directorInfoTitle = "Director's Information",
   directorDocumentsTitle = "Director Information Documents",
   anchorLabel = "Anchor",
+  showAnchorField = true,   // false for investor — investors don't have an anchor field
   refreshVendorInfo,        // called after edit email/phone success, and on vendor-information tab switch
   fetchBeneficiaryFn,       // override for investor — defaults to vendor beneficiary API
   editContactFn,            // override for investor — defaults to vendor edit contact API
@@ -43,6 +166,7 @@ export default function VendorDetailContent({
   const [phoneModal, setPhoneModal]   = useState(false)
   const [blockModal, setBlockModal]   = useState(false)
   const [deleteModal, setDeleteModal] = useState(false)
+  const [viewerDoc, setViewerDoc]     = useState(null)
 
   // Beneficiary tab state
   const [beneficiaryFetched, setBeneficiaryFetched] = useState(false)
@@ -242,9 +366,11 @@ export default function VendorDetailContent({
                 <InfoField label="Address"                        value={vendor.address} />
               </section>
 
-              <section className="border-t border-borderGrey pt-4">
-                <InfoField label={anchorLabel} value={vendor.anchor} />
-              </section>
+              {showAnchorField && (
+                <section className="border-t border-borderGrey pt-4">
+                  <InfoField label={anchorLabel} value={vendor.anchor} />
+                </section>
+              )}
             </CardContent>
           </Card>
 
@@ -257,7 +383,7 @@ export default function VendorDetailContent({
                     key={doc.title}
                     title={doc.title}
                     value={doc.file}
-                    handleClick={() => doc.url && window.open(doc.url, "_blank")}
+                    handleClick={() => doc.url && setViewerDoc({ label: doc.title, url: doc.url, ext: doc.ext })}
                   />
                 ))}
               </section>
@@ -286,7 +412,7 @@ export default function VendorDetailContent({
                     key={doc.title}
                     title={doc.title}
                     value={doc.file}
-                    handleClick={() => doc.url && window.open(doc.url, "_blank")}
+                    handleClick={() => doc.url && setViewerDoc({ label: doc.title, url: doc.url, ext: doc.ext })}
                   />
                 ))}
               </section>
@@ -323,7 +449,11 @@ export default function VendorDetailContent({
                     <DetailCard
                       title="Account Letter"
                       value={letter.filename || letter.file || ""}
-                      handleClick={() => letter.url && window.open(letter.url, "_blank")}
+                      handleClick={() => letter.url && setViewerDoc({
+                        label: `Account Letter for ${letter.anchor_name}`,
+                        url: letter.url,
+                        ext: letter.ext,
+                      })}
                     />
                   </div>
                 </CardContent>
@@ -421,6 +551,14 @@ export default function VendorDetailContent({
           )}
         </TabsContent>
       </Tabs>
+
+      {viewerDoc && (
+        <DocumentViewerDialog
+          doc={viewerDoc}
+          open={!!viewerDoc}
+          onClose={() => setViewerDoc(null)}
+        />
+      )}
 
       <UpdateBeneficiaryModal
         open={updateBeneficiaryModal}

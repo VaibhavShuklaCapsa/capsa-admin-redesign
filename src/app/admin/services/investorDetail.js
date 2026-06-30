@@ -92,11 +92,13 @@ export const getInvestorDetailData = async (bvn) => {
       title: doc.label    ?? "",
       file:  doc.filename ?? "",
       url:   doc.url      ?? null,
+      ext:   doc.ext      ?? "",
     })),
     directorDocuments: (d.data?.director_docs ?? []).map((doc) => ({
       title: doc.label    ?? "",
       file:  doc.filename ?? "",
       url:   doc.url      ?? null,
+      ext:   doc.ext      ?? "",
     })),
   }
 
