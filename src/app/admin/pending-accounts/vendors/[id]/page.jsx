@@ -658,7 +658,7 @@ export default function PendingVendorDetailPage() {
                     </DropdownMenu>
                   </header>
 
-                  <section className="grid grid-cols-5 gap-6 border-t border-borderGrey pt-6">
+                  <section className="grid grid-cols-5 gap-6">
                     <VerifiableField
                       label="BVN"
                       value={vendorInfo.bvn}
@@ -673,7 +673,7 @@ export default function PendingVendorDetailPage() {
                     <InfoField label="Date Joined" value={fmtDate(vendorInfo.date_joined)} />
                   </section>
 
-                  <section className="grid grid-cols-5 gap-6 border-t border-borderGrey pt-6">
+                  <section className="grid grid-cols-5 gap-6">
                     <InfoField label="Business Entity Type" value={vendorInfo.business_entity_type || "—"} />
                     <InfoField label="Industry" value={vendorInfo.industry || "—"} />
                     <InfoField label="Date Founded" value={fmtDate(vendorInfo.date_founded)} />
@@ -693,7 +693,7 @@ export default function PendingVendorDetailPage() {
               <Card className="border border-borderGrey rounded-2xl shadow-sm py-0">
                 <CardContent className="p-6 space-y-6">
                   <h4 className="text-base font-semibold text-customBlack">Director&apos;s Information</h4>
-                  <section className="grid grid-cols-5 gap-6 border-t border-borderGrey pt-6">
+                  <section className="grid grid-cols-5 gap-6">
                     <InfoField label="Director's Name" value={directorsInfo?.director_name || "—"} />
                     <InfoField label="Phone Number" value={directorsInfo?.phone || "—"} />
                     <InfoField label="BVN" value={directorsInfo?.bvn || "—"} />

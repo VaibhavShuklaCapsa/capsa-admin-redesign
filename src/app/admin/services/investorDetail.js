@@ -78,6 +78,8 @@ export const getInvestorDetailData = async (bvn) => {
     dateFounded:        fmtDate(inv.date_founded),
     tin:                inv.tin                ?? "",
     address:            inv.address            ?? "",
+    city:               inv.city               ?? "",
+    state:              inv.state              ?? "",
     anchor:             "",
 
     // Director info
@@ -95,6 +97,12 @@ export const getInvestorDetailData = async (bvn) => {
       ext:   doc.ext      ?? "",
     })),
     directorDocuments: (d.data?.director_docs ?? []).map((doc) => ({
+      title: doc.label    ?? "",
+      file:  doc.filename ?? "",
+      url:   doc.url      ?? null,
+      ext:   doc.ext      ?? "",
+    })),
+    verificationDocuments: (d.data?.verification_docs ?? []).map((doc) => ({
       title: doc.label    ?? "",
       file:  doc.filename ?? "",
       url:   doc.url      ?? null,

@@ -62,8 +62,8 @@ export default function AddGuarantorPage() {
       </header>
 
       <form onSubmit={handleSubmit} className="bg-white border border-borderGrey rounded-2xl p-6 space-y-8">
-        <section className="grid grid-cols-2 gap-8">
-          <label className="space-y-2 text-base font-semibold text-customBlack">
+        <section className="space-y-8">
+          <label className="block space-y-2 text-base font-semibold text-customBlack">
             Company Name <span className="text-[#EF4444]">*</span>
             <Input
               value={companyName}
@@ -74,27 +74,29 @@ export default function AddGuarantorPage() {
             />
           </label>
 
-          <label className="space-y-2 text-base font-semibold text-customBlack">
-            RC Number <span className="text-[#EF4444]">*</span>
-            <Input
-              value={rcNumber}
-              onChange={(e) => setRcNumber(e.target.value)}
-              placeholder="Enter RC Number"
-              className="h-12 border-borderGrey text-base font-normal"
-              required
-            />
-          </label>
+          <div className="grid grid-cols-2 gap-8">
+            <label className="space-y-2 text-base font-semibold text-customBlack">
+              Industry <span className="text-[#EF4444]">*</span>
+              <Input
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value)}
+                placeholder="Enter Industry"
+                className="h-12 border-borderGrey text-base font-normal"
+                required
+              />
+            </label>
 
-          <label className="space-y-2 text-base font-semibold text-customBlack">
-            Industry <span className="text-[#EF4444]">*</span>
-            <Input
-              value={industry}
-              onChange={(e) => setIndustry(e.target.value)}
-              placeholder="Enter Industry"
-              className="h-12 border-borderGrey text-base font-normal"
-              required
-            />
-          </label>
+            <label className="space-y-2 text-base font-semibold text-customBlack">
+              RC Number <span className="text-[#EF4444]">*</span>
+              <Input
+                value={rcNumber}
+                onChange={(e) => setRcNumber(e.target.value)}
+                placeholder="Enter RC Number"
+                className="h-12 border-borderGrey text-base font-normal"
+                required
+              />
+            </label>
+          </div>
         </section>
 
         <label className="block space-y-2 text-base font-semibold text-customBlack">

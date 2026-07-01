@@ -565,7 +565,7 @@ export default function PendingInvestorDetailPage() {
                   </header>
 
                   {/* Row 1 — common fields */}
-                  <section className="grid grid-cols-5 gap-6 border-t border-borderGrey pt-6">
+                  <section className="grid grid-cols-5 gap-6">
                     <VerifiableField
                       label="BVN"
                       value={investorInfo.bvn}
@@ -582,7 +582,7 @@ export default function PendingInvestorDetailPage() {
 
                   {/* Row 2 — differs by type */}
                   {isCorporate ? (
-                    <section className="grid grid-cols-5 gap-6 border-t border-borderGrey pt-6">
+                    <section className="grid grid-cols-5 gap-6">
                       <InfoField label="Business Entity Type" value={investorInfo.business_entity_type || "—"} />
                       <InfoField label="Industry" value={investorInfo.industry || "—"} />
                       <InfoField label="Date Founded" value={fmtDate(investorInfo.date_founded)} />
@@ -590,7 +590,7 @@ export default function PendingInvestorDetailPage() {
                       <InfoField label="Address" value={investorInfo.address || "—"} />
                     </section>
                   ) : (
-                    <section className="grid grid-cols-5 gap-6 border-t border-borderGrey pt-6">
+                    <section className="grid grid-cols-5 gap-6">
                       <InfoField label="Address" value={investorInfo.address || "—"} />
                       <InfoField label="City" value={investorInfo.city || "—"} />
                       <InfoField label="State" value={investorInfo.state || "—"} />
@@ -604,7 +604,7 @@ export default function PendingInvestorDetailPage() {
                 <Card className="border border-borderGrey rounded-2xl shadow-sm py-0">
                   <CardContent className="p-6 space-y-6">
                     <h4 className="text-base font-semibold text-customBlack">Director&apos;s Information</h4>
-                    <section className="grid grid-cols-5 gap-6 border-t border-borderGrey pt-6">
+                    <section className="grid grid-cols-5 gap-6">
                       <InfoField label="Director's Name" value={directorsInfo?.director_name || "—"} />
                       <InfoField label="Phone Number" value={directorsInfo?.phone || "—"} />
                       <InfoField label="BVN" value={directorsInfo?.bvn || "—"} />

@@ -69,7 +69,7 @@ function DocumentViewerDialog({ doc, open, onClose }) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
         aria-describedby={undefined}
-        overlayClassName="bg-transparent"
+        overlayClassName="bg-black/50"
         style={{
           width: "720px",
           maxWidth: "95vw",
@@ -132,7 +132,15 @@ function DocumentViewerDialog({ doc, open, onClose }) {
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", width: "100%" }}>
           <button
-            onClick={() => fullUrl && window.open(fullUrl, "_blank")}
+            onClick={() => {
+              if (!fullUrl) return
+              const a = document.createElement("a")
+              a.href = fullUrl
+              a.download = doc?.label || "document"
+              document.body.appendChild(a)
+              a.click()
+              document.body.removeChild(a)
+            }}
             disabled={!fullUrl}
             style={{ ...dialogBtnBase, background: "#FFF", border: "1px solid #E4E4E7", color: "#09090B", opacity: !fullUrl ? 0.4 : 1 }}
           >
@@ -152,6 +160,7 @@ export default function VendorDetailContent({
   companyDocumentsTitle = "Company Information Documents",
   directorInfoTitle = "Director's Information",
   directorDocumentsTitle = "Director Information Documents",
+  investorType,              // "Individual" | "Corporate" | undefined (vendors = undefined)
   anchorLabel = "Anchor",
   showAnchorField = true,   // false for investor — investors don't have an anchor field
   refreshVendorInfo,        // called after edit email/phone success, and on vendor-information tab switch
@@ -162,6 +171,16 @@ export default function VendorDetailContent({
   updateEmailPrefFn,        // override for investor — defaults to vendor update pref API
   emailPrefFields,          // override field config for investor email prefs
 }) {
+  const downloadFile = (url, label) => {
+    if (!url) return
+    const a = document.createElement("a")
+    a.href = url
+    a.download = label || "document"
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
   const [emailModal, setEmailModal]   = useState(false)
   const [phoneModal, setPhoneModal]   = useState(false)
   const [blockModal, setBlockModal]   = useState(false)
@@ -303,12 +322,13 @@ export default function VendorDetailContent({
         </TabsList>
 
         <TabsContent value="vendor-information" className="space-y-6">
+          {/* Shared header card — same for all types */}
           <Card className="border border-borderGrey rounded-2xl shadow-sm py-0">
             <CardContent className="p-6 space-y-6">
               <header className="flex items-start justify-between gap-4">
                 <section className="flex items-center gap-3 flex-wrap">
                   <div>
-                    <p className="text-xs text-grey mb-1">Vendor Name</p>
+                    <p className="text-xs text-grey mb-1">{investorType ? "Investor Name" : "Vendor Name"}</p>
                     <div className="flex items-center gap-2">
                       <h3 className="text-xl font-bold text-customBlack">{vendor.name}</h3>
                       <StatusBadge status={vendor.status} />
@@ -353,71 +373,113 @@ export default function VendorDetailContent({
                 </DropdownMenu>
               </header>
 
-              <section className="grid grid-cols-5 gap-6 border-t border-borderGrey pt-6">
-                <InfoField label="BVN"                            value={vendor.bvn} />
-                <InfoField label="Email Address"                  value={vendor.email} editable />
-                <InfoField label="Phone Number"                   value={vendor.phone} editable />
-                <InfoField label="RC/BN Number"                   value={vendor.rcNumber} />
-                <InfoField label="Date Joined"                    value={vendor.dateJoined} />
-                <InfoField label="Business Entity Type"           value={vendor.businessEntityType} />
-                <InfoField label="Industry"                       value={vendor.industry} />
-                <InfoField label="Date Founded"                   value={vendor.dateFounded} />
-                <InfoField label="Tax Identification Number (TIN)"value={vendor.tin} />
-                <InfoField label="Address"                        value={vendor.address} />
-              </section>
-
-              {showAnchorField && (
-                <section className="border-t border-borderGrey pt-4">
-                  <InfoField label={anchorLabel} value={vendor.anchor} />
+              {investorType === "Individual" ? (
+                <section className="grid grid-cols-5 gap-6 border-t border-borderGrey pt-6">
+                  <InfoField label="BVN"            value={vendor.bvn} />
+                  <InfoField label="Email Address"  value={vendor.email} editable />
+                  <InfoField label="Phone Number"   value={vendor.phone} editable />
+                  <InfoField label="Investor Type"  value={vendor.type} />
+                  <InfoField label="Date Joined"    value={vendor.dateJoined} />
+                  <InfoField label="Address"        value={vendor.address} />
+                  <InfoField label="City"           value={vendor.city} />
+                  <InfoField label="State"          value={vendor.state} />
                 </section>
+              ) : (
+                <>
+                  <section className="grid grid-cols-5 gap-6 border-t border-borderGrey pt-6">
+                    <InfoField label="BVN"                            value={vendor.bvn} />
+                    <InfoField label="Email Address"                  value={vendor.email} editable />
+                    <InfoField label="Phone Number"                   value={vendor.phone} editable />
+                    <InfoField label="RC/BN Number" value={vendor.rcNumber} />
+                    <InfoField label="Date Joined"                    value={vendor.dateJoined} />
+                    <InfoField label="Business Entity Type"           value={vendor.businessEntityType} />
+                    <InfoField label="Industry"                       value={vendor.industry} />
+                    <InfoField label="Date Founded"                   value={vendor.dateFounded} />
+                    <InfoField label={investorType === "Corporate" ? "RC Number" : "Tax Identification Number (TIN)"} value={investorType === "Corporate" ? vendor.rcNumber : vendor.tin} />
+                    <InfoField label="Address"                        value={vendor.address} />
+                  </section>
+
+                  {showAnchorField && (
+                    <section>
+                      <InfoField label={anchorLabel} value={vendor.anchor} />
+                    </section>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
 
-          <Card className="border border-borderGrey rounded-2xl shadow-sm py-0">
-            <CardContent className="p-6 space-y-4">
-              <h4 className="text-base font-semibold text-customBlack">{companyDocumentsTitle}</h4>
-              <section className="grid grid-cols-3 gap-4">
-                {vendor.companyDocuments?.map((doc) => (
-                  <DetailCard
-                    key={doc.title}
-                    title={doc.title}
-                    value={doc.file}
-                    handleClick={() => doc.url && setViewerDoc({ label: doc.title, url: doc.url, ext: doc.ext })}
-                  />
-                ))}
-              </section>
-            </CardContent>
-          </Card>
+          {investorType === "Individual" ? (
+            /* Individual investor — Verification Documents only */
+            vendor.verificationDocuments?.length > 0 && (
+              <Card className="border border-borderGrey rounded-2xl shadow-sm py-0">
+                <CardContent className="p-6 space-y-4">
+                  <h4 className="text-base font-semibold text-customBlack">Verification Documents</h4>
+                  <section className="grid grid-cols-2 gap-4">
+                    {vendor.verificationDocuments.map((doc) => (
+                      <DetailCard
+                        key={doc.title}
+                        title={doc.title}
+                        value={doc.file}
+                        handleClick={() => doc.url && setViewerDoc({ label: doc.title, url: doc.url, ext: doc.ext })}
+                        onDownload={() => downloadFile(doc.url, doc.title)}
+                      />
+                    ))}
+                  </section>
+                </CardContent>
+              </Card>
+            )
+          ) : (
+            /* Corporate investor or Vendor — full layout */
+            <>
+              <Card className="border border-borderGrey rounded-2xl shadow-sm py-0">
+                <CardContent className="p-6 space-y-4">
+                  <h4 className="text-base font-semibold text-customBlack">{companyDocumentsTitle}</h4>
+                  <section className="grid grid-cols-3 gap-4">
+                    {vendor.companyDocuments?.map((doc) => (
+                      <DetailCard
+                        key={doc.title}
+                        title={doc.title}
+                        value={doc.file}
+                        handleClick={() => doc.url && setViewerDoc({ label: doc.title, url: doc.url, ext: doc.ext })}
+                        onDownload={() => downloadFile(doc.url, doc.title)}
+                      />
+                    ))}
+                  </section>
+                </CardContent>
+              </Card>
 
-          <Card className="border border-borderGrey rounded-2xl shadow-sm py-0">
-            <CardContent className="p-6 space-y-4">
-              <h4 className="text-base font-semibold text-customBlack">{directorInfoTitle}</h4>
-              <section className="grid grid-cols-5 gap-6">
-                <InfoField label="Director's Name"      value={vendor.directorName} />
-                <InfoField label="Phone Number"         value={vendor.directorPhone} />
-                <InfoField label="BVN"                  value={vendor.directorBvn} />
-                <InfoField label="NIN"                  value={vendor.directorNin} />
-                <InfoField label="Political Affiliation" value={vendor.politicalAffiliation} />
-              </section>
-            </CardContent>
-          </Card>
+              <Card className="border border-borderGrey rounded-2xl shadow-sm py-0">
+                <CardContent className="p-6 space-y-4">
+                  <h4 className="text-base font-semibold text-customBlack">{directorInfoTitle}</h4>
+                  <section className="grid grid-cols-5 gap-6">
+                    <InfoField label="Director's Name"       value={vendor.directorName} />
+                    <InfoField label="Phone Number"          value={vendor.directorPhone} />
+                    <InfoField label="BVN"                   value={vendor.directorBvn} />
+                    <InfoField label="NIN"                   value={vendor.directorNin} />
+                    <InfoField label="Political Affiliation" value={vendor.politicalAffiliation} />
+                  </section>
+                </CardContent>
+              </Card>
 
-          <Card className="border border-borderGrey rounded-2xl shadow-sm py-0">
-            <CardContent className="p-6 space-y-4">
-              <h4 className="text-base font-semibold text-customBlack">{directorDocumentsTitle}</h4>
-              <section className="grid grid-cols-2 gap-4">
-                {vendor.directorDocuments?.map((doc) => (
-                  <DetailCard
-                    key={doc.title}
-                    title={doc.title}
-                    value={doc.file}
-                    handleClick={() => doc.url && setViewerDoc({ label: doc.title, url: doc.url, ext: doc.ext })}
-                  />
-                ))}
-              </section>
-            </CardContent>
-          </Card>
+              <Card className="border border-borderGrey rounded-2xl shadow-sm py-0">
+                <CardContent className="p-6 space-y-4">
+                  <h4 className="text-base font-semibold text-customBlack">{directorDocumentsTitle}</h4>
+                  <section className="grid grid-cols-2 gap-4">
+                    {vendor.directorDocuments?.map((doc) => (
+                      <DetailCard
+                        key={doc.title}
+                        title={doc.title}
+                        value={doc.file}
+                        handleClick={() => doc.url && setViewerDoc({ label: doc.title, url: doc.url, ext: doc.ext })}
+                        onDownload={() => downloadFile(doc.url, doc.title)}
+                      />
+                    ))}
+                  </section>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="anchors" className="space-y-4">
@@ -454,6 +516,7 @@ export default function VendorDetailContent({
                         url: letter.url,
                         ext: letter.ext,
                       })}
+                      onDownload={() => downloadFile(letter.url, `Account Letter for ${letter.anchor_name}`)}
                     />
                   </div>
                 </CardContent>

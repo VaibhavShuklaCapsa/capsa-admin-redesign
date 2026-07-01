@@ -248,14 +248,14 @@ export default function InvoicesPage() {
   return (
     <section className="space-y-6">
       <header className="flex items-start justify-between gap-4">
-        <section>
-          <h2 className="text-2xl font-bold text-customBlack mb-1">Invoices</h2>
-          <p className="text-sm text-grey">Showing all invoices</p>
-        </section>
-        <section className="flex items-center gap-3">
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-2xl font-bold text-customBlack mb-1">Invoices</h2>
+            <p className="text-sm text-grey">Showing all invoices</p>
+          </div>
           <DateRangePicker label="Select Date Range" showChevron onChange={handleDateChange} />
-          <Button className="bg-blue hover:bg-blue/90 text-white rounded-lg px-5 h-10">Download</Button>
         </section>
+        <Button className="bg-blue hover:bg-blue/90 text-white rounded-lg px-5 h-10">Download</Button>
       </header>
 
       <section className="bg-white border border-borderGrey rounded-xl overflow-hidden">

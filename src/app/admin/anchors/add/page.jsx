@@ -88,6 +88,14 @@ const COMPANY_TYPE_OPTIONS = [
   { value: "partnership",      label: "Partnership" },
 ]
 
+const STATE_OPTIONS = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
+  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu",
+  "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi",
+  "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo",
+  "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
+].map((s) => ({ value: s, label: s }))
+
 const COVERAGE_OPTIONS = [
   { value: "local",        label: "Local" },
   { value: "national",     label: "National" },
@@ -194,7 +202,7 @@ export default function AddAnchorPage() {
 
       {/* ── Step 1: Business Information ── */}
       {step === 1 && (
-        <div className="bg-white border border-borderGrey rounded-2xl p-8 space-y-6">
+        <div className="border border-borderGrey rounded-2xl p-8 space-y-6" style={{ background: "#fff" }}>
           <h3 className="text-base font-semibold text-customBlack">Business Information</h3>
 
           <div className="grid grid-cols-2 gap-6">
@@ -208,7 +216,15 @@ export default function AddAnchorPage() {
 
           <div className="grid grid-cols-2 gap-6">
             <Field label="BVN" required>
-              <TextInput placeholder="Enter BVN" value={form.bvn} onChange={set("bvn")} />
+              <input
+                type="text"
+                value={form.bvn}
+                onChange={(e) => set("bvn")(e.target.value.slice(0, 11))}
+                placeholder="Enter BVN"
+                maxLength={11}
+                style={inputStyle}
+                className="placeholder:text-[#A1A1AA] focus:border-[#0098DB]"
+              />
             </Field>
             <Field label="Industry" required>
               <TextInput placeholder="Enter Industry" value={form.industry} onChange={set("industry")} />
@@ -242,7 +258,7 @@ export default function AddAnchorPage() {
               <TextInput placeholder="Enter City" value={form.city} onChange={set("city")} />
             </Field>
             <Field label="State" required>
-              <TextInput placeholder="Enter State" value={form.state} onChange={set("state")} />
+              <SelectInput placeholder="Select State" value={form.state} onChange={set("state")} options={STATE_OPTIONS} />
             </Field>
           </div>
 
@@ -334,7 +350,7 @@ export default function AddAnchorPage() {
 
       {/* ── Step 2: Upload Business Document ── */}
       {step === 2 && (
-        <div className="bg-white border border-borderGrey rounded-2xl p-8 space-y-6">
+        <div className="border border-borderGrey rounded-2xl p-8 space-y-6" style={{ background: "#fff" }}>
           <h3 className="text-base font-semibold text-customBlack">Upload Business Document</h3>
 
           <FileUpload label="Upload Financial Report" required value={financialReport} onChange={setFinancialReport} />

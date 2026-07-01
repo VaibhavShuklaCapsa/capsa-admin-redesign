@@ -54,6 +54,7 @@ export default function InvestorDetailPage() {
         vendor={data.investor}
         tabs={data.tabs}
         actions={data.actions}
+        investorType={data.investor.type}
         companyDocumentsTitle="Investor Documents"
         directorInfoTitle="Director's Information"
         directorDocumentsTitle="Director Information Documents"

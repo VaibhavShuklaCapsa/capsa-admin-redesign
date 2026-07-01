@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import React from 'react'
 
-const DetailCard = ({ title, value, handleClick }) => {
+const DetailCard = ({ title, value, handleClick, onDownload }) => {
   return (
     <div className="flex items-center justify-between gap-3 bg-[#F4F4F5] px-4 py-4 rounded-lg w-full">
       <div className="flex items-center gap-3 min-w-0">
@@ -19,7 +19,12 @@ const DetailCard = ({ title, value, handleClick }) => {
             </p>
           )}
           {value && (
-            <p className="text-sm text-grey break-all leading-snug">{value}</p>
+            <p
+              className="text-sm text-grey break-all leading-snug cursor-pointer hover:underline hover:text-blue"
+              onClick={() => handleClick?.()}
+            >
+              {value}
+            </p>
           )}
         </div>
       </div>
@@ -30,7 +35,7 @@ const DetailCard = ({ title, value, handleClick }) => {
         height={28}
         alt="download"
         className="cursor-pointer shrink-0"
-        onClick={() => handleClick?.()}
+        onClick={() => onDownload?.()}
       />
     </div>
   )
